@@ -7,13 +7,19 @@ import { HiddenWordPlay, makeHiddenWordSetup, type HWPackKind } from './ui';
 import { baseConfig, BLANK, CITIZEN, INFILTRATOR, makeHWModule, SPY, TOPIC_SPY, type Deal } from './core';
 
 const screensFor = (k: HWPackKind) => ({ Setup: makeHiddenWordSetup(k), Play: HiddenWordPlay });
-const sel = (kind: Parameters<typeof itemsOf>[0]) => packSelection.default({ builtin: [], custom: [] }).describe(kind);
+const sel = (kind: Parameters<typeof itemsOf>[0]) =>
+  packSelection.default({ builtin: [], custom: [] }).describe(kind);
 
 // ------------------------------------------------------------ جاسوس کلاسیک
 const classicCfg = z.object({ ...baseConfig, packs: sel('locations') });
 type ClassicCfg = z.infer<typeof classicCfg>;
 
-function locationDeal(cfg: { packs: ClassicCfg['packs'] }, rng: Rng, withRoles: boolean, spies: number): Deal {
+function locationDeal(
+  cfg: { packs: ClassicCfg['packs'] },
+  rng: Rng,
+  withRoles: boolean,
+  spies: number,
+): Deal {
   const locations = itemsOf('locations', cfg.packs);
   const loc = rng.pick(locations);
   return {
@@ -162,7 +168,11 @@ export const spyBlank = makeHWModule<InfCfg>({
 });
 
 // ------------------------------------------------------------ شانزده‌خانه (جدول ۱۶ کلمه‌ای)
-const gridCfg = z.object({ ...baseConfig, roundSeconds: z.number().int().min(0).max(1800).default(180), packs: sel('grids') });
+const gridCfg = z.object({
+  ...baseConfig,
+  roundSeconds: z.number().int().min(0).max(1800).default(180),
+  packs: sel('grids'),
+});
 type GridCfg = z.infer<typeof gridCfg>;
 
 export const spyGrid = makeHWModule<GridCfg>({

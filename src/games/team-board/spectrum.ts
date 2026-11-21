@@ -118,7 +118,8 @@ export const spectrum: GameModule<SpecConfig, SpecState, SpecAction, SpecView> =
         s.phase = 'counter';
         return s;
       case 'counter': {
-        if (s.phase !== 'counter' || !(s.local || (teamOf(s, actor) >= 0 && teamOf(s, actor) !== a))) return state;
+        if (s.phase !== 'counter' || !(s.local || (teamOf(s, actor) >= 0 && teamOf(s, actor) !== a)))
+          return state;
         s.counter = action.side;
         const pts = pointsFor(s.dial, s.target);
         const counterOk = pts < 4 && (action.side === 'left' ? s.target < s.dial : s.target > s.dial);

@@ -41,7 +41,13 @@ interface Saved {
   session: LocalStore['session'];
 }
 
-const emptySession = (): LocalStore['session'] => ({ scores: {}, stats: {}, round: 0, result: null, players: [] });
+const emptySession = (): LocalStore['session'] => ({
+  scores: {},
+  stats: {},
+  round: 0,
+  result: null,
+  players: [],
+});
 const playersOf = (names: string[]): Player[] => names.map((name, i) => ({ id: `p${i + 1}`, name }));
 
 export const useLocal = create<LocalStore>((set, get) => {
@@ -96,8 +102,17 @@ export const useLocal = create<LocalStore>((set, get) => {
       const players = playersOf(names);
       const invalid = module.validate?.(config as never, players.length);
       if (invalid) return invalid.k;
-      const runner = GameRunner.create(module, players, config, { seed: randomSeed(), now: Date.now(), hostId: HOST, local: true });
-      set((s) => ({ module, runner, session: { ...s.session, players, round: s.session.round + 1, result: null } }));
+      const runner = GameRunner.create(module, players, config, {
+        seed: randomSeed(),
+        now: Date.now(),
+        hostId: HOST,
+        local: true,
+      });
+      set((s) => ({
+        module,
+        runner,
+        session: { ...s.session, players, round: s.session.round + 1, result: null },
+      }));
       afterChange();
       return null;
     },
@@ -126,7 +141,8 @@ export const useLocal = create<LocalStore>((set, get) => {
       let runner: GameRunner | null = null;
       try {
         if (saved.gameId) module = await loadGame(saved.gameId);
-        if (saved.runner && module && saved.runner.gameId === module.id) runner = GameRunner.restore(module, saved.runner);
+        if (saved.runner && module && saved.runner.gameId === module.id)
+          runner = GameRunner.restore(module, saved.runner);
       } catch {
         runner = null;
       }

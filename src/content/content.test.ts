@@ -38,7 +38,10 @@ describe('content packs (CI schema check, §11.1)', () => {
   });
 
   it('custom packs embedded in a config are used', () => {
-    const items = itemsOf('pairs', { builtin: ['nope'], custom: [{ id: 'mine', kind: 'pairs', nameFa: 'من', items: [{ a: 'x', b: 'y' }] }] });
+    const items = itemsOf('pairs', {
+      builtin: ['nope'],
+      custom: [{ id: 'mine', kind: 'pairs', nameFa: 'من', items: [{ a: 'x', b: 'y' }] }],
+    });
     expect(items).toEqual([{ a: 'x', b: 'y' }]);
   });
 });

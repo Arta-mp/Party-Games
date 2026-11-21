@@ -27,15 +27,20 @@ export function Home() {
         </span>
       }
       headerEnd={
-        <Link to="/settings" aria-label={t('settings.title')} className="flex items-center gap-2 rounded-full bg-surface-2 py-1 ps-1 pe-3" data-testid="me-chip">
+        <Link
+          to="/settings"
+          aria-label={t('settings.title')}
+          className="bg-surface-2 flex items-center gap-2 rounded-full py-1 ps-1 pe-3"
+          data-testid="me-chip"
+        >
           <Avatar name={name} size={36} />
           <span className="max-w-24 truncate text-sm font-bold">{name}</span>
         </Link>
       }
     >
-      <Card className="flex flex-col gap-3 border-brand/30 bg-gradient-to-b from-brand/10 to-surface p-5">
-        <h2 className="text-2xl font-black leading-snug">{t('home.hello', { name })}</h2>
-        <p className="text-sm leading-7 text-muted">{t('home.tagline')}</p>
+      <Card className="border-brand/30 from-brand/10 to-surface flex flex-col gap-3 bg-gradient-to-b p-5">
+        <h2 className="text-2xl leading-snug font-black">{t('home.hello', { name })}</h2>
+        <p className="text-muted text-sm leading-7">{t('home.tagline')}</p>
         <Button
           size="xl"
           block
@@ -62,27 +67,29 @@ export function Home() {
       </Card>
 
       <div className="grid grid-cols-2 gap-2">
-        <Link to="/custom" className="rounded-2xl border border-border bg-surface p-4 text-sm font-bold">
+        <Link to="/custom" className="border-border bg-surface rounded-2xl border p-4 text-sm font-bold">
           ✏️ {t('home.custom')}
         </Link>
-        <Link to="/settings" className="rounded-2xl border border-border bg-surface p-4 text-sm font-bold">
+        <Link to="/settings" className="border-border bg-surface rounded-2xl border p-4 text-sm font-bold">
           ⚙️ {t('settings.title')}
         </Link>
       </div>
 
-      <SectionTitle>{t('home.allGames', { n: num(FAMILIES.reduce((s, f) => s + gamesOf(f.id).length, 0)) })}</SectionTitle>
+      <SectionTitle>
+        {t('home.allGames', { n: num(FAMILIES.reduce((s, f) => s + gamesOf(f.id).length, 0)) })}
+      </SectionTitle>
       {FAMILIES.map((f) => (
         <section key={f.id} data-family={f.id} className="flex flex-col gap-2">
-          <h3 className="flex items-center gap-2 text-lg font-black text-accent">
+          <h3 className="text-accent flex items-center gap-2 text-lg font-black">
             <span>{f.emoji}</span> {t(`family.${f.id}`)}
           </h3>
-          <p className="-mt-1 text-xs text-muted">{t(`family.${f.id}.desc`)}</p>
+          <p className="text-muted -mt-1 text-xs">{t(`family.${f.id}.desc`)}</p>
           {gamesOf(f.id).map((g) => (
             <GameCard key={g.id} meta={g} onClick={() => setHow(g.id)} />
           ))}
         </section>
       ))}
-      <p className="py-4 text-center text-xs text-muted">{t('home.footer')}</p>
+      <p className="text-muted py-4 text-center text-xs">{t('home.footer')}</p>
 
       <Sheet open={joinOpen} onClose={() => setJoinOpen(false)} title={t('home.join')}>
         <TextField

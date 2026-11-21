@@ -76,7 +76,11 @@ describe('word-guess team core', () => {
   });
 
   it('charades filters by category and difficulty', () => {
-    const d = new Driver(charades, makePlayers(4), { ...charades.defaultConfig, categories: ['حیوان'], difficulty: 1 });
+    const d = new Driver(charades, makePlayers(4), {
+      ...charades.defaultConfig,
+      categories: ['حیوان'],
+      difficulty: 1,
+    });
     for (const c of S(d).deck) expect(c.category).toBe('حیوان');
     expect(S(d).deck.length).toBe(6);
   });
@@ -124,14 +128,26 @@ describe('word.drawing', () => {
     const word = (d.view(drawer) as DrawView).word!;
     expect(word).toBeTruthy();
     expectNoLeak(d.view(g1!), [word]);
-    d.act(drawer, { type: 'stroke', s: { c: 1, w: 1, d: encodePoints([[0.1, 0.1], [0.5, 0.5]]) } });
+    d.act(drawer, {
+      type: 'stroke',
+      s: {
+        c: 1,
+        w: 1,
+        d: encodePoints([
+          [0.1, 0.1],
+          [0.5, 0.5],
+        ]),
+      },
+    });
     d.noop(g1!, { type: 'stroke', s: { c: 1, w: 1, d: 'AAAA' } });
     expect((d.view(g1!) as DrawView).strokes).toHaveLength(1);
     d.act(g1!, { type: 'guess', text: 'اشتباه' });
     d.act(g2!, { type: 'guess', text: ` ${word.replace(/ی/g, 'ي')} ` });
     // g3 must not learn the word from g2's correct guess
     expectNoLeak(d.view(g3!), [word]);
-    expect((d.view(g2!) as DrawView).guesses.find((g) => g.p === g2)?.text).toContain(word.replace(/ی/g, 'ي'));
+    expect((d.view(g2!) as DrawView).guesses.find((g) => g.p === g2)?.text).toContain(
+      word.replace(/ی/g, 'ي'),
+    );
     d.noop(g2!, { type: 'guess', text: word });
     d.act(g1!, { type: 'guess', text: word });
     d.act(g3!, { type: 'guess', text: word });
@@ -157,8 +173,12 @@ describe('word.drawing', () => {
     const d = new Driver(drawing, makePlayers(3));
     const drawer = (d.state as DrawState).order[0]!;
     d.act(drawer, { type: 'start' });
-    expect(d.runner.dispatch({ type: 'stroke', s: { c: 99, w: 0, d: 'AAAA' } }, drawer, d.now).ok).toBe(false);
-    expect(d.runner.dispatch({ type: 'stroke', s: { c: 0, w: 0, d: '<script>' } }, drawer, d.now).ok).toBe(false);
+    expect(d.runner.dispatch({ type: 'stroke', s: { c: 99, w: 0, d: 'AAAA' } }, drawer, d.now).ok).toBe(
+      false,
+    );
+    expect(d.runner.dispatch({ type: 'stroke', s: { c: 0, w: 0, d: '<script>' } }, drawer, d.now).ok).toBe(
+      false,
+    );
   });
 });
 

@@ -3,17 +3,27 @@ import { useNum } from '@/i18n';
 import { Avatar, Card } from '@/ui/kit';
 
 /** Horizontal bar chart of votes per player (used by «کی احتمالاً» and friends). */
-export function VoteBars({ players, counts, highlight }: { players: Player[]; counts: Record<PlayerId, number>; highlight?: PlayerId[] }) {
+export function VoteBars({
+  players,
+  counts,
+  highlight,
+}: {
+  players: Player[];
+  counts: Record<PlayerId, number>;
+  highlight?: PlayerId[];
+}) {
   const num = useNum();
   const max = Math.max(1, ...Object.values(counts));
-  const rows = [...players].filter((p) => counts[p.id]).sort((a, b) => (counts[b.id] ?? 0) - (counts[a.id] ?? 0));
+  const rows = [...players]
+    .filter((p) => counts[p.id])
+    .sort((a, b) => (counts[b.id] ?? 0) - (counts[a.id] ?? 0));
   return (
     <Card className="flex flex-col gap-3" data-testid="vote-bars">
       {rows.map((p) => (
         <div key={p.id} className="flex items-center gap-2">
           <Avatar name={p.name} size={30} />
           <span className="w-20 truncate text-sm font-bold">{p.name}</span>
-          <div className="h-6 flex-1 overflow-hidden rounded-full bg-surface-2">
+          <div className="bg-surface-2 h-6 flex-1 overflow-hidden rounded-full">
             <div
               className={`h-full rounded-full transition-[width] duration-300 ${highlight?.includes(p.id) ? 'bg-accent' : 'bg-muted/50'}`}
               style={{ width: `${((counts[p.id] ?? 0) / max) * 100}%` }}

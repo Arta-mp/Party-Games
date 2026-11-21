@@ -8,3 +8,4 @@ playwright-report
 screenshots/tmp
 stats.html
 screenshots
+lighthouse.json

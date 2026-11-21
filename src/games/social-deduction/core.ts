@@ -1,6 +1,15 @@
 import { z } from 'zod';
 import type { Rng } from '@/core/engine/rng';
-import { clone, type Ctx, type GameResult, type Msg, type Player, type PlayerId, type SetupOptions, type SystemAction } from '@/core/engine/types';
+import {
+  clone,
+  type Ctx,
+  type GameResult,
+  type Msg,
+  type Player,
+  type PlayerId,
+  type SetupOptions,
+  type SystemAction,
+} from '@/core/engine/types';
 import { abilityRoleSchema, DEFAULT_PRIORITY, type AbilityRole, type NightAbility } from '@/custom/schemas';
 import { checkComposition, defaultComposition, type Composition } from './roles';
 
@@ -13,7 +22,10 @@ export type Phase = 'reveal' | 'night' | 'dawn' | 'day' | 'vote' | 'revenge' | '
 
 export const mafiaConfig = z.object({
   /** null = pick a sensible default for the player count */
-  composition: z.array(z.object({ role: abilityRoleSchema, n: z.number().int().min(0).max(12) })).nullable().default(null),
+  composition: z
+    .array(z.object({ role: abilityRoleSchema, n: z.number().int().min(0).max(12) }))
+    .nullable()
+    .default(null),
   daySeconds: z.number().int().min(0).max(1200).default(240),
   revealOnDeath: z.boolean().default(true),
   voteMode: z.enum(['secret', 'host']).default('secret'),
@@ -24,7 +36,11 @@ export type MafiaConfig = z.infer<typeof mafiaConfig>;
 
 export const mafiaAction = z.discriminatedUnion('type', [
   z.object({ type: z.literal('ack') }),
-  z.object({ type: z.literal('night'), ability: z.number().int().min(-1).max(3), target: z.string().nullable() }),
+  z.object({
+    type: z.literal('night'),
+    ability: z.number().int().min(-1).max(3),
+    target: z.string().nullable(),
+  }),
   z.object({ type: z.literal('continue') }),
   z.object({ type: z.literal('startVote') }),
   z.object({ type: z.literal('vote'), target: z.string() }),
@@ -57,7 +73,12 @@ export interface MafiaState {
   uses: Record<PlayerId, number[]>;
   bulletproofUsed: PlayerId[];
   notes: Record<PlayerId, Msg[]>;
-  dawn: { killed: { id: PlayerId; role: string | null }[]; saved: number; revealed: { id: PlayerId; role: string }[]; silenced: PlayerId[] } | null;
+  dawn: {
+    killed: { id: PlayerId; role: string | null }[];
+    saved: number;
+    revealed: { id: PlayerId; role: string }[];
+    silenced: PlayerId[];
+  } | null;
   silenced: PlayerId[];
   endsAt: number | null;
   cfg: MafiaConfig;
@@ -81,7 +102,10 @@ export function priorityOf(s: MafiaState, role: AbilityRole, ab: NightAbility): 
   return s.cfg.priorities[role.id] ?? ab.priority ?? DEFAULT_PRIORITY[ab.action];
 }
 
-export function availableAbilities(s: MafiaState, p: PlayerId): { index: number; ability: NightAbility; usesLeft: number | null }[] {
+export function availableAbilities(
+  s: MafiaState,
+  p: PlayerId,
+): { index: number; ability: NightAbility; usesLeft: number | null }[] {
   if (!s.alive.includes(p) || s.phase !== 'night') return [];
   const role = roleOf(s, p);
   return role.night
@@ -123,12 +147,27 @@ function note(s: MafiaState, p: PlayerId, m: Msg) {
 
 // ------------------------------------------------------------------ setup
 
-export function setupMafia(kind: MafiaKind, players: Player[], cfg: MafiaConfig, rng: Rng, opts: SetupOptions): MafiaState {
+export function setupMafia(
+  kind: MafiaKind,
+  players: Player[],
+  cfg: MafiaConfig,
+  rng: Rng,
+  opts: SetupOptions,
+): MafiaState {
   const moderator = kind === 'moderated' ? opts.hostId : null;
   const seats = players.filter((p) => p.id !== moderator);
-  const comp: Composition = cfg.composition ?? defaultComposition(kind === 'werewolf' ? 'werewolf' : kind === 'onenight' ? 'onenight' : 'mafia', seats.length);
-  const base = comp.find((c) => c.role.team === 'citizens' && c.role.night.length === 0)?.role ?? defaultComposition('mafia', 5).find((c) => c.role.id === 'citizen')!.role;
-  const roles: AbilityRole[] = [...new Map([...comp.map((c) => c.role), base].map((r) => [r.id, r])).values()];
+  const comp: Composition =
+    cfg.composition ??
+    defaultComposition(
+      kind === 'werewolf' ? 'werewolf' : kind === 'onenight' ? 'onenight' : 'mafia',
+      seats.length,
+    );
+  const base =
+    comp.find((c) => c.role.team === 'citizens' && c.role.night.length === 0)?.role ??
+    defaultComposition('mafia', 5).find((c) => c.role.id === 'citizen')!.role;
+  const roles: AbilityRole[] = [
+    ...new Map([...comp.map((c) => c.role), base].map((r) => [r.id, r])).values(),
+  ];
   const bag: string[] = [];
   for (const c of comp) for (let i = 0; i < c.n; i++) bag.push(c.role.id);
   while (bag.length < seats.length) bag.push(base.id);
@@ -167,7 +206,9 @@ export function setupMafia(kind: MafiaKind, players: Player[], cfg: MafiaConfig,
 
 export function validateMafia(kind: MafiaKind, cfg: MafiaConfig, n: number): Msg | null {
   const seats = kind === 'moderated' ? n - 1 : n;
-  const comp = cfg.composition ?? defaultComposition(kind === 'werewolf' ? 'werewolf' : kind === 'onenight' ? 'onenight' : 'mafia', seats);
+  const comp =
+    cfg.composition ??
+    defaultComposition(kind === 'werewolf' ? 'werewolf' : kind === 'onenight' ? 'onenight' : 'mafia', seats);
   const err = checkComposition(comp, seats);
   return err ? { k: err } : null;
 }
@@ -246,7 +287,10 @@ export function resolveNight(s: MafiaState) {
         const mine = s.assign[a.actor]!;
         s.assign[a.actor] = s.assign[a.target]!;
         s.assign[a.target] = mine;
-        note(s, a.actor, { k: 'mafia.note.swapped', p: { name: name(s, a.target), role: roleOf(s, a.actor).nameFa } });
+        note(s, a.actor, {
+          k: 'mafia.note.swapped',
+          p: { name: name(s, a.target), role: roleOf(s, a.actor).nameFa },
+        });
         break;
       }
       case 'kill':
@@ -260,7 +304,8 @@ export function resolveNight(s: MafiaState) {
           break;
         }
         killed.set(a.target, a.actor);
-        if (a.role.onWrongKill === 'selfDies' && targetRole.team === a.role.team) killed.set(a.actor, a.actor);
+        if (a.role.onWrongKill === 'selfDies' && targetRole.team === a.role.team)
+          killed.set(a.actor, a.actor);
         break;
       case 'convert': {
         const mafiaRole = s.roles.find((r) => r.team === a.role.team && r.id !== a.role.id) ?? a.role;
@@ -272,11 +317,21 @@ export function resolveNight(s: MafiaState) {
       }
       case 'investigate': {
         if (s.kind === 'onenight') {
-          note(s, a.actor, { k: 'mafia.note.sawRole', p: { name: name(s, a.target), role: targetRole.nameFa } });
+          note(s, a.actor, {
+            k: 'mafia.note.sawRole',
+            p: { name: name(s, a.target), role: targetRole.nameFa },
+          });
           break;
         }
-        const guilty = targetRole.passive.includes('appearsInnocent') ? false : targetRole.passive.includes('appearsGuilty') ? true : targetRole.team === 'mafia';
-        note(s, a.actor, { k: guilty ? 'mafia.note.guilty' : 'mafia.note.innocent', p: { name: name(s, a.target) } });
+        const guilty = targetRole.passive.includes('appearsInnocent')
+          ? false
+          : targetRole.passive.includes('appearsGuilty')
+            ? true
+            : targetRole.team === 'mafia';
+        note(s, a.actor, {
+          k: guilty ? 'mafia.note.guilty' : 'mafia.note.innocent',
+          p: { name: name(s, a.target) },
+        });
         break;
       }
       case 'reveal':
@@ -292,7 +347,10 @@ export function resolveNight(s: MafiaState) {
     revealed,
     silenced: [...s.silenced],
   };
-  s.log.push({ k: 'mafia.log.night', p: { n: s.night, names: victims.map((v) => name(s, v)).join('، ') || '—' } });
+  s.log.push({
+    k: 'mafia.log.night',
+    p: { n: s.night, names: victims.map((v) => name(s, v)).join('، ') || '—' },
+  });
   return victims;
 }
 
@@ -329,15 +387,23 @@ function startDay(s: MafiaState, now: number) {
   s.endsAt = s.cfg.daySeconds > 0 ? now + s.cfg.daySeconds * 1000 : null;
 }
 
-function lynch(s: MafiaState, target: PlayerId | null, tally: Record<string, number>, now: number): MafiaState {
+function lynch(
+  s: MafiaState,
+  target: PlayerId | null,
+  tally: Record<string, number>,
+  now: number,
+): MafiaState {
   s.lastLynch = { id: target, role: target && s.cfg.revealOnDeath ? roleOf(s, target).nameFa : null, tally };
   s.votes = {};
   if (s.kind === 'onenight') {
     // one vote decides everything, using the roles *after* the night's swaps
     const wolves = s.players.filter((p) => s.assign[p.id] && teamOf(s, p.id) === 'mafia').map((p) => p.id);
-    if (target && roleOf(s, target).winCondition === 'lynched') finish(s, { team: 'neutral', solo: target, reason: 'mafia.reason.jester' });
-    else if (target && teamOf(s, target) === 'mafia') finish(s, { team: 'citizens', solo: null, reason: 'mafia.reason.wolfLynched' });
-    else if (wolves.length === 0 && !target) finish(s, { team: 'citizens', solo: null, reason: 'mafia.reason.noWolves' });
+    if (target && roleOf(s, target).winCondition === 'lynched')
+      finish(s, { team: 'neutral', solo: target, reason: 'mafia.reason.jester' });
+    else if (target && teamOf(s, target) === 'mafia')
+      finish(s, { team: 'citizens', solo: null, reason: 'mafia.reason.wolfLynched' });
+    else if (wolves.length === 0 && !target)
+      finish(s, { team: 'citizens', solo: null, reason: 'mafia.reason.noWolves' });
     else finish(s, { team: 'mafia', solo: null, reason: 'mafia.reason.wolvesSurvive' });
     s.lastLynch.role = target ? roleOf(s, target).nameFa : null;
     return s;
@@ -372,7 +438,12 @@ function tallyVotes(s: MafiaState, now: number): MafiaState {
 
 // ------------------------------------------------------------------ reducer
 
-export function reduceMafia(state: MafiaState, action: MafiaAction | SystemAction, actor: PlayerId, ctx: Ctx): MafiaState {
+export function reduceMafia(
+  state: MafiaState,
+  action: MafiaAction | SystemAction,
+  actor: PlayerId,
+  ctx: Ctx,
+): MafiaState {
   const s = clone(state);
   const now = ctx.now;
   switch (action.type) {
@@ -421,8 +492,10 @@ export function reduceMafia(state: MafiaState, action: MafiaAction | SystemActio
       return s;
     }
     case 'vote': {
-      if (s.phase !== 'vote' || s.cfg.voteMode !== 'secret' || !s.alive.includes(actor) || s.votes[actor]) return state;
-      if (action.target !== SKIP && (!s.alive.includes(action.target) || action.target === actor)) return state;
+      if (s.phase !== 'vote' || s.cfg.voteMode !== 'secret' || !s.alive.includes(actor) || s.votes[actor])
+        return state;
+      if (action.target !== SKIP && (!s.alive.includes(action.target) || action.target === actor))
+        return state;
       s.votes[actor] = action.target;
       if (s.alive.every((p) => s.votes[p])) return tallyVotes(s, now);
       return s;
@@ -437,7 +510,15 @@ export function reduceMafia(state: MafiaState, action: MafiaAction | SystemActio
       s.alive = s.alive.filter((p) => p !== action.target);
       s.log.push({ k: 'mafia.log.revenge', p: { name: name(s, action.target) } });
       s.lastLynch = s.lastLynch ?? null;
-      s.dawn = s.dawn ? { ...s.dawn, killed: [...s.dawn.killed, { id: action.target, role: s.cfg.revealOnDeath ? roleOf(s, action.target).nameFa : null }] } : s.dawn;
+      s.dawn = s.dawn
+        ? {
+            ...s.dawn,
+            killed: [
+              ...s.dawn.killed,
+              { id: action.target, role: s.cfg.revealOnDeath ? roleOf(s, action.target).nameFa : null },
+            ],
+          }
+        : s.dawn;
       s.revengeBy = null;
       const w = checkWin(s);
       if (w) {
@@ -451,7 +532,9 @@ export function reduceMafia(state: MafiaState, action: MafiaAction | SystemActio
     case 'modToggle': {
       if (s.phase !== 'moderating' || (actor !== s.moderator && !s.local)) return state;
       if (!s.assign[action.target]) return state;
-      s.alive = s.alive.includes(action.target) ? s.alive.filter((p) => p !== action.target) : [...s.alive, action.target];
+      s.alive = s.alive.includes(action.target)
+        ? s.alive.filter((p) => p !== action.target)
+        : [...s.alive, action.target];
       return s;
     }
     case 'modEnd': {
@@ -486,15 +569,27 @@ export interface MafiaView {
     role: { id: string; nameFa: string; emoji: string; team: AbilityRole['team']; descriptionFa: string };
     teammates: { id: PlayerId; roleName: string }[];
     notes: Msg[];
-    abilities: { index: number; action: NightAbility['action']; target: NightAbility['target']; usesLeft: number | null }[];
+    abilities: {
+      index: number;
+      action: NightAbility['action'];
+      target: NightAbility['target'];
+      usesLeft: number | null;
+    }[];
     choice: NightChoice | null;
     teamPicks: { id: PlayerId; target: PlayerId | null }[];
     silenced: boolean;
   } | null;
   nightDone: PlayerId[];
   /** moderated mode: the script + all roles, only for the moderator */
-  script: { order: { roleName: string; emoji: string; action: string; players: PlayerId[] }[]; roles: { id: PlayerId; roleName: string; emoji: string; team: string }[] } | null;
-  outcome: { winner: NonNullable<MafiaState['winner']>; roles: { id: PlayerId; roleName: string; emoji: string; team: string; initial: string }[]; log: Msg[] } | null;
+  script: {
+    order: { roleName: string; emoji: string; action: string; players: PlayerId[] }[];
+    roles: { id: PlayerId; roleName: string; emoji: string; team: string }[];
+  } | null;
+  outcome: {
+    winner: NonNullable<MafiaState['winner']>;
+    roles: { id: PlayerId; roleName: string; emoji: string; team: string; initial: string }[];
+    log: Msg[];
+  } | null;
 }
 
 export function viewMafia(s: MafiaState, viewer: PlayerId | 'public'): MafiaView {
@@ -519,7 +614,10 @@ export function viewMafia(s: MafiaState, viewer: PlayerId | 'public'): MafiaView
     dawn: s.phase === 'night' ? null : s.dawn,
     lastLynch: s.lastLynch,
     revengeBy: s.revengeBy,
-    deadRoles: s.cfg.revealOnDeath && s.kind !== 'moderated' ? dead.map((id) => ({ id, role: roleOf(s, id).nameFa })) : [],
+    deadRoles:
+      s.cfg.revealOnDeath && s.kind !== 'moderated'
+        ? dead.map((id) => ({ id, role: roleOf(s, id).nameFa }))
+        : [],
     me:
       isSeat && role
         ? {
@@ -532,17 +630,26 @@ export function viewMafia(s: MafiaState, viewer: PlayerId | 'public'): MafiaView
             },
             teammates: mates.map((id) => ({ id, roleName: roleOf(s, id).nameFa })),
             notes: s.notes[viewer as PlayerId] ?? [],
-            abilities: availableAbilities(s, viewer as PlayerId).map((a) => ({ index: a.index, action: a.ability.action, target: a.ability.target, usesLeft: a.usesLeft })),
+            abilities: availableAbilities(s, viewer as PlayerId).map((a) => ({
+              index: a.index,
+              action: a.ability.action,
+              target: a.ability.target,
+              usesLeft: a.usesLeft,
+            })),
             choice: s.choices[viewer as PlayerId] ?? null,
             teamPicks:
               s.phase === 'night'
-                ? mates.filter((m) => s.alive.includes(m)).map((m) => {
-                    const c = s.choices[m];
-                    const ab = c && c.ability >= 0 ? roleOf(s, m).night[c.ability] : null;
-                    return { id: m, target: ab?.shared ? c!.target : null };
-                  })
+                ? mates
+                    .filter((m) => s.alive.includes(m))
+                    .map((m) => {
+                      const c = s.choices[m];
+                      const ab = c && c.ability >= 0 ? roleOf(s, m).night[c.ability] : null;
+                      return { id: m, target: ab?.shared ? c!.target : null };
+                    })
                 : [],
-            silenced: s.silenced.includes(viewer as PlayerId) && (s.phase === 'day' || s.phase === 'vote' || s.phase === 'dawn'),
+            silenced:
+              s.silenced.includes(viewer as PlayerId) &&
+              (s.phase === 'day' || s.phase === 'vote' || s.phase === 'dawn'),
           }
         : null,
     nightDone: s.phase === 'night' ? Object.keys(s.choices) : [],
@@ -553,7 +660,13 @@ export function viewMafia(s: MafiaState, viewer: PlayerId | 'public'): MafiaView
             winner: s.winner,
             roles: Object.keys(s.assign).map((id) => {
               const r = roleOf(s, id);
-              return { id, roleName: r.nameFa, emoji: r.emoji, team: r.team, initial: roleById(s, s.initialAssign[id]!).nameFa };
+              return {
+                id,
+                roleName: r.nameFa,
+                emoji: r.emoji,
+                team: r.team,
+                initial: roleById(s, s.initialAssign[id]!).nameFa,
+              };
             }),
             log: s.log,
           }
@@ -570,13 +683,25 @@ export function moderatorScript(s: MafiaState): NonNullable<MafiaView['script']>
       const key = ab.shared ? `${role.team}:${ab.action}` : `${role.id}:${ab.action}`;
       const existing = steps.find((x) => x.action === key);
       if (existing) existing.players.push(...holders.filter((h) => !existing.players.includes(h)));
-      else steps.push({ roleName: ab.shared ? role.team : role.nameFa, emoji: role.emoji, action: key, players: holders, prio: priorityOf(s, role, ab) });
+      else
+        steps.push({
+          roleName: ab.shared ? role.team : role.nameFa,
+          emoji: role.emoji,
+          action: key,
+          players: holders,
+          prio: priorityOf(s, role, ab),
+        });
     });
   }
   steps.sort((a, b) => a.prio - b.prio);
   return {
     order: steps.map(({ prio: _p, ...x }) => ({ ...x, action: x.action.split(':')[1]! })),
-    roles: Object.keys(s.assign).map((id) => ({ id, roleName: roleOf(s, id).nameFa, emoji: roleOf(s, id).emoji, team: roleOf(s, id).team })),
+    roles: Object.keys(s.assign).map((id) => ({
+      id,
+      roleName: roleOf(s, id).nameFa,
+      emoji: roleOf(s, id).emoji,
+      team: roleOf(s, id).team,
+    })),
   };
 }
 
@@ -596,7 +721,10 @@ export function resultMafia(s: MafiaState): GameResult | null {
   if (s.moderator) scores[s.moderator] = 1;
   return {
     winners,
-    title: { k: w.solo ? 'mafia.result.solo' : `mafia.result.${w.team}`, p: { name: w.solo ? name(s, w.solo) : '' } },
+    title: {
+      k: w.solo ? 'mafia.result.solo' : `mafia.result.${w.team}`,
+      p: { name: w.solo ? name(s, w.solo) : '' },
+    },
     lines: [{ k: w.reason }, ...s.log.slice(-4)],
     scores,
     reveal: seats.map((p) => ({ playerId: p, label: `${roleOf(s, p).emoji} ${roleOf(s, p).nameFa}` })),

@@ -15,7 +15,10 @@ describe('party.esmfamil', () => {
   });
 
   it('scores unique 10, duplicate 5, sole answer 20, invalid 0', () => {
-    const d = new Driver(esmFamil, makePlayers(3), { ...esmFamil.defaultConfig, columns: ['اسم', 'شهر', 'غذا'] });
+    const d = new Driver(esmFamil, makePlayers(3), {
+      ...esmFamil.defaultConfig,
+      columns: ['اسم', 'شهر', 'غذا'],
+    });
     const s = d.state as EsmState;
     const L = s.letter;
     const fake: EsmState = {
@@ -35,7 +38,11 @@ describe('party.esmfamil', () => {
   });
 
   it('online: answers stay private while writing; stop needs full answers; grace timer then judging', () => {
-    const d = new Driver(esmFamil, makePlayers(3), { ...esmFamil.defaultConfig, columns: ['اسم', 'شهر', 'غذا'], stopGraceSeconds: 5 });
+    const d = new Driver(esmFamil, makePlayers(3), {
+      ...esmFamil.defaultConfig,
+      columns: ['اسم', 'شهر', 'غذا'],
+      stopGraceSeconds: 5,
+    });
     const s = d.state as EsmState;
     const L = s.letter;
     d.act('p1', { type: 'answers', answers: [`${L}ینا`, `${L}شهر`, `${L}غذا`] });
@@ -56,7 +63,11 @@ describe('party.esmfamil', () => {
   });
 
   it('majority rejection invalidates an answer; host finishes judging and next round picks a new letter', () => {
-    const d = new Driver(esmFamil, makePlayers(3), { ...esmFamil.defaultConfig, columns: ['اسم', 'شهر', 'غذا'], rounds: 2 });
+    const d = new Driver(esmFamil, makePlayers(3), {
+      ...esmFamil.defaultConfig,
+      columns: ['اسم', 'شهر', 'غذا'],
+      rounds: 2,
+    });
     const L = (d.state as EsmState).letter;
     d.act('p1', { type: 'answers', answers: [`${L}الکی`, '', ''] });
     d.advance(120_000);
@@ -79,7 +90,12 @@ describe('party.esmfamil', () => {
   });
 
   it('pass & play: one writer at a time with a personal timer', () => {
-    const d = new Driver(esmFamil, makePlayers(2), { ...esmFamil.defaultConfig, columns: ['اسم', 'شهر', 'غذا'] }, { local: true });
+    const d = new Driver(
+      esmFamil,
+      makePlayers(2),
+      { ...esmFamil.defaultConfig, columns: ['اسم', 'شهر', 'غذا'] },
+      { local: true },
+    );
     expect(d.pending()).toEqual(['p1']);
     expect(d.runner.deadline()).toBeNull();
     d.noop('p2', { type: 'startTurn' });
@@ -112,7 +128,9 @@ describe('party.mostlikely', () => {
     d.act('p1', { type: 'next' });
     for (const id of d.ids()) d.act(id, { type: 'vote', target: 'p2' });
     d.act('p1', { type: 'next' });
-    expect(d.result()?.winners.sort()).toEqual(['p1', 'p2', 'p3', 'p4'].filter((id) => (d.state as MLState).points[id] === 2).sort());
+    expect(d.result()?.winners.sort()).toEqual(
+      ['p1', 'p2', 'p3', 'p4'].filter((id) => (d.state as MLState).points[id] === 2).sort(),
+    );
   });
   it('can forbid self votes; uses only most-likely questions', () => {
     const d = new Driver(mostLikely, makePlayers(3), { ...mostLikely.defaultConfig, allowSelf: false });
@@ -123,7 +141,11 @@ describe('party.mostlikely', () => {
 
 describe('party.truthdare', () => {
   it('spin → choose → task → score, never the same player twice in a row', () => {
-    const d = new Driver(truthDare, makePlayers(3), { ...truthDare.defaultConfig, turns: 6, level: 'family' });
+    const d = new Driver(truthDare, makePlayers(3), {
+      ...truthDare.defaultConfig,
+      turns: 6,
+      level: 'family',
+    });
     let last: string | null = null;
     for (let i = 0; i < 6; i++) {
       d.noop('p2', { type: 'spin' });
@@ -143,8 +165,14 @@ describe('party.truthdare', () => {
   });
   it('family level never serves spicy prompts', async () => {
     const { itemsOf } = await import('@/content/builtin');
-    const spicy = itemsOf('questions', undefined).filter((q) => q.level === 'spicy').map((q) => q.q);
-    const d = new Driver(truthDare, makePlayers(2), { ...truthDare.defaultConfig, turns: 30, level: 'family' });
+    const spicy = itemsOf('questions', undefined)
+      .filter((q) => q.level === 'spicy')
+      .map((q) => q.q);
+    const d = new Driver(truthDare, makePlayers(2), {
+      ...truthDare.defaultConfig,
+      turns: 30,
+      level: 'family',
+    });
     for (let i = 0; i < 24; i++) {
       d.act('p1', { type: 'spin' });
       const cur = (d.state as TDState).current!;

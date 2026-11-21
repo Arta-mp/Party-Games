@@ -41,7 +41,11 @@ export const SPY: InfoRole = infoRoleSchema.parse({
   count: { min: 1, max: 3 },
   descriptionFa: 'راز را نمی‌دانی. از حرف بقیه حدس بزن و لو نرو.',
 });
-export const TOPIC_SPY: InfoRole = { ...SPY, sees: 'category', descriptionFa: 'فقط دسته را می‌دانی، نه کلمه را.' };
+export const TOPIC_SPY: InfoRole = {
+  ...SPY,
+  sees: 'category',
+  descriptionFa: 'فقط دسته را می‌دانی، نه کلمه را.',
+};
 export const INFILTRATOR: InfoRole = infoRoleSchema.parse({
   id: 'infiltrator',
   nameFa: 'نفوذی',
@@ -138,7 +142,10 @@ export const baseConfig = {
   roundSeconds: z.number().int().min(0).max(1800).default(300),
   voteMode: z.enum(['secret', 'host']).default('secret'),
   /** custom information roles (§7.2) with how many of each */
-  extraRoles: z.array(z.object({ role: infoRoleSchema, n: z.number().int().min(0).max(4) })).max(6).default([]),
+  extraRoles: z
+    .array(z.object({ role: infoRoleSchema, n: z.number().int().min(0).max(4) }))
+    .max(6)
+    .default([]),
 };
 
 export const hwAction = z.discriminatedUnion('type', [
@@ -163,7 +170,11 @@ export interface HWModeDef<C> {
   screens: GameModule<C, HWState, HWAction, HWView>['screens'];
 }
 
-type BaseCfg = { roundSeconds: number; voteMode: 'secret' | 'host'; extraRoles: { role: InfoRole; n: number }[] };
+type BaseCfg = {
+  roundSeconds: number;
+  voteMode: 'secret' | 'host';
+  extraRoles: { role: InfoRole; n: number }[];
+};
 
 // ---------------------------------------------------------------- dealing
 
@@ -177,7 +188,10 @@ export function dealPlayers(players: Player[], deal: Deal, cfg: BaseCfg, rng: Rn
   const { list, citizens } = allRoles(deal, cfg.extraRoles, players.length);
   if (citizens < 0) throw new GameError('too-many-roles');
   const citizenRole = list.find((r) => r.role.id === CITIZEN.id)?.role ?? CITIZEN;
-  const roleDefs: InfoRole[] = [citizenRole, ...list.map((r) => r.role).filter((r) => r.id !== citizenRole.id)];
+  const roleDefs: InfoRole[] = [
+    citizenRole,
+    ...list.map((r) => r.role).filter((r) => r.id !== citizenRole.id),
+  ];
   const bag: string[] = [];
   for (const r of list) if (r.role.id !== citizenRole.id) for (let i = 0; i < r.n; i++) bag.push(r.role.id);
   while (bag.length < players.length) bag.push(citizenRole.id);
@@ -257,7 +271,9 @@ function eliminate(s: HWState, target: PlayerId, now: number): HWState {
     return s;
   }
   if (s.elimination === 'single') {
-    return role.team === 'spies' ? citizensWin(s, 'hw.reason.caught', target) : finish(s, 'spies', 'hw.reason.wrongVote');
+    return role.team === 'spies'
+      ? citizensWin(s, 'hw.reason.caught', target)
+      : finish(s, 'spies', 'hw.reason.wrongVote');
   }
   return checkMulti(s, now);
 }
@@ -288,7 +304,14 @@ function tally(s: HWState, now: number): HWState {
 
 // ---------------------------------------------------------------- module factory
 
-export function setupHW(players: Player[], deal: Deal, cfg: BaseCfg, def: Pick<HWModeDef<unknown>, 'elimination' | 'spyGuessAnytime'>, rng: Rng, opts: SetupOptions): HWState {
+export function setupHW(
+  players: Player[],
+  deal: Deal,
+  cfg: BaseCfg,
+  def: Pick<HWModeDef<unknown>, 'elimination' | 'spyGuessAnytime'>,
+  rng: Rng,
+  opts: SetupOptions,
+): HWState {
   const { roleDefs, assign } = dealPlayers(players, deal, cfg, rng);
   return {
     local: opts.local,
@@ -320,7 +343,12 @@ export function setupHW(players: Player[], deal: Deal, cfg: BaseCfg, def: Pick<H
   };
 }
 
-export function reduceHW(state: HWState, action: HWAction | SystemAction, actor: PlayerId, ctx: Ctx): HWState {
+export function reduceHW(
+  state: HWState,
+  action: HWAction | SystemAction,
+  actor: PlayerId,
+  ctx: Ctx,
+): HWState {
   const s = clone(state);
   const now = ctx.now;
   switch (action.type) {
@@ -346,7 +374,8 @@ export function reduceHW(state: HWState, action: HWAction | SystemAction, actor:
     }
     case 'vote': {
       if (s.phase !== 'vote' || s.voteMode !== 'secret') return state;
-      if (!s.alive.includes(actor) || !s.alive.includes(action.target) || action.target === actor) return state;
+      if (!s.alive.includes(actor) || !s.alive.includes(action.target) || action.target === actor)
+        return state;
       s.votes[actor] = action.target;
       if (s.alive.every((id) => s.votes[id])) return tally(s, now);
       return s;
@@ -386,7 +415,9 @@ export function reduceHW(state: HWState, action: HWAction | SystemAction, actor:
     case 'witnessGuess': {
       if (s.phase !== 'witness' || actor !== s.guesser) return state;
       const found = roleOf(s, action.target).onEliminated === 'spyGuessesWitness';
-      return found ? finish(s, 'spies', 'hw.reason.witnessFound') : finish(s, 'citizens', 'hw.reason.witnessSafe');
+      return found
+        ? finish(s, 'spies', 'hw.reason.witnessFound')
+        : finish(s, 'citizens', 'hw.reason.witnessSafe');
     }
   }
 }
@@ -424,7 +455,12 @@ export interface HWView {
   } | null;
   guess: { guesser: PlayerId; mine: boolean; options: string[] | null } | null;
   witness: { guesser: PlayerId; mine: boolean } | null;
-  outcome: (Outcome & { secret: string; roles: { id: PlayerId; roleName: string; emoji: string; word: string | null }[] }) | null;
+  outcome:
+    | (Outcome & {
+        secret: string;
+        roles: { id: PlayerId; roleName: string; emoji: string; word: string | null }[];
+      })
+    | null;
 }
 
 export function viewHW(s: HWState, viewer: PlayerId | 'public'): HWView {
@@ -475,7 +511,11 @@ export function viewHW(s: HWState, viewer: PlayerId | 'public'): HWView {
         : null,
     guess:
       s.phase === 'guess' && s.guesser
-        ? { guesser: s.guesser, mine: viewer === s.guesser, options: viewer === s.guesser ? s.guessOptions : null }
+        ? {
+            guesser: s.guesser,
+            mine: viewer === s.guesser,
+            options: viewer === s.guesser ? s.guessOptions : null,
+          }
         : null,
     witness: s.phase === 'witness' && s.guesser ? { guesser: s.guesser, mine: viewer === s.guesser } : null,
     outcome:
@@ -497,17 +537,31 @@ export function resultHW(s: HWState): GameResult | null {
   const o = s.outcome;
   const spies = s.players.filter((p) => isSpyTeam(s, p.id)).map((p) => p.id);
   const winners =
-    o.team === 'solo' ? [o.soloId!] : o.team === 'spies' ? spies : s.players.map((p) => p.id).filter((id) => !spies.includes(id));
+    o.team === 'solo'
+      ? [o.soloId!]
+      : o.team === 'spies'
+        ? spies
+        : s.players.map((p) => p.id).filter((id) => !spies.includes(id));
   const pts = o.team === 'solo' ? 3 : o.team === 'spies' ? 2 : 1;
   const scores: Record<PlayerId, number> = {};
   for (const id of winners) scores[id] = pts;
   return {
     winners,
-    title: { k: o.team === 'citizens' ? 'hw.result.citizens' : o.team === 'spies' ? 'hw.result.spies' : 'hw.result.solo' },
+    title: {
+      k:
+        o.team === 'citizens'
+          ? 'hw.result.citizens'
+          : o.team === 'spies'
+            ? 'hw.result.spies'
+            : 'hw.result.solo',
+    },
     lines: [{ k: o.reason }],
     secret: s.secret,
     scores,
-    reveal: s.players.map((p) => ({ playerId: p.id, label: `${roleOf(s, p.id).emoji} ${roleOf(s, p.id).nameFa}` })),
+    reveal: s.players.map((p) => ({
+      playerId: p.id,
+      label: `${roleOf(s, p.id).emoji} ${roleOf(s, p.id).nameFa}`,
+    })),
     highlights: o.team === 'citizens' ? [] : winners.map((id) => ({ key: 'spy-win', playerId: id })),
   };
 }
@@ -527,7 +581,8 @@ export function makeHWModule<C extends BaseCfg>(def: HWModeDef<C>): GameModule<C
     configSchema: def.configSchema,
     actionSchema: hwAction,
     defaultConfig: def.defaultConfig,
-    setup: (players, config, rng, opts) => setupHW(players, def.deal(config, rng, players.length), config, def, rng, opts),
+    setup: (players, config, rng, opts) =>
+      setupHW(players, def.deal(config, rng, players.length), config, def, rng, opts),
     reduce: reduceHW,
     viewFor: viewHW,
     result: resultHW,
@@ -538,7 +593,18 @@ export function makeHWModule<C extends BaseCfg>(def: HWModeDef<C>): GameModule<C
       if (n > def.meta.maxPlayers) return { k: 'err.maxPlayers', p: { n: def.meta.maxPlayers } };
       const custom = def.validate?.(config, n);
       if (custom) return custom;
-      const probe = def.deal(config, { next: () => 0, int: (a) => a, pick: (x) => x[0]!, shuffle: (x) => [...x], sample: (x, k) => x.slice(0, k), chance: () => false }, n);
+      const probe = def.deal(
+        config,
+        {
+          next: () => 0,
+          int: (a) => a,
+          pick: (x) => x[0]!,
+          shuffle: (x) => [...x],
+          sample: (x, k) => x.slice(0, k),
+          chance: () => false,
+        },
+        n,
+      );
       const { list, citizens } = allRoles(probe, config.extraRoles, n);
       const spies = list.filter((r) => r.role.team === 'spies').reduce((t, r) => t + r.n, 0);
       if (citizens < 0) return { k: 'err.tooManyRoles' };

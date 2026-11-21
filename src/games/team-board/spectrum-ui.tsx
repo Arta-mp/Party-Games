@@ -9,30 +9,72 @@ export function SpectrumSetup({ config, onChange }: SetupProps<SpecConfig>) {
   const t = useT();
   return (
     <div className="flex flex-col gap-3">
-      <Stepper label={t('spec.cfg.target')} value={config.target} min={3} max={20} onChange={(target) => onChange({ ...config, target })} />
-      <Stepper label={t('spec.cfg.rounds')} value={config.maxRounds} min={2} max={30} onChange={(maxRounds) => onChange({ ...config, maxRounds })} />
-      <PackPicker kind="spectrums" value={config.packs} onChange={(packs) => onChange({ ...config, packs })} />
+      <Stepper
+        label={t('spec.cfg.target')}
+        value={config.target}
+        min={3}
+        max={20}
+        onChange={(target) => onChange({ ...config, target })}
+      />
+      <Stepper
+        label={t('spec.cfg.rounds')}
+        value={config.maxRounds}
+        min={2}
+        max={30}
+        onChange={(maxRounds) => onChange({ ...config, maxRounds })}
+      />
+      <PackPicker
+        kind="spectrums"
+        value={config.packs}
+        onChange={(packs) => onChange({ ...config, packs })}
+      />
     </div>
   );
 }
 
 /** The spectrum bar. LTR geometry (0 = left end) regardless of page direction. */
-function Dial({ view, value, onChange, editable }: { view: SpecView; value: number; onChange?: (v: number) => void; editable: boolean }) {
+function Dial({
+  view,
+  value,
+  onChange,
+  editable,
+}: {
+  view: SpecView;
+  value: number;
+  onChange?: (v: number) => void;
+  editable: boolean;
+}) {
   return (
     <div className="flex flex-col gap-2" dir="ltr">
       <div className="flex justify-between text-sm font-black" dir="rtl">
         <span>{view.spectrum.right} ←</span>
         <span>→ {view.spectrum.left}</span>
       </div>
-      <div className="relative h-16 overflow-hidden rounded-2xl bg-gradient-to-r from-team-b/70 via-surface-2 to-team-a/70" data-testid="dial">
+      <div
+        className="from-team-b/70 via-surface-2 to-team-a/70 relative h-16 overflow-hidden rounded-2xl bg-gradient-to-r"
+        data-testid="dial"
+      >
         {view.target != null && (
           <>
-            <span className="absolute inset-y-0 bg-brand/25" style={{ left: `${view.target - 20}%`, width: '40%' }} />
-            <span className="absolute inset-y-0 bg-brand/40" style={{ left: `${view.target - 12}%`, width: '24%' }} />
-            <span className="absolute inset-y-0 bg-brand" style={{ left: `${view.target - 4}%`, width: '8%' }} data-testid="target" />
+            <span
+              className="bg-brand/25 absolute inset-y-0"
+              style={{ left: `${view.target - 20}%`, width: '40%' }}
+            />
+            <span
+              className="bg-brand/40 absolute inset-y-0"
+              style={{ left: `${view.target - 12}%`, width: '24%' }}
+            />
+            <span
+              className="bg-brand absolute inset-y-0"
+              style={{ left: `${view.target - 4}%`, width: '8%' }}
+              data-testid="target"
+            />
           </>
         )}
-        <span className="absolute inset-y-0 w-1.5 -translate-x-1/2 bg-white shadow" style={{ left: `${value}%` }} />
+        <span
+          className="absolute inset-y-0 w-1.5 -translate-x-1/2 bg-white shadow"
+          style={{ left: `${value}%` }}
+        />
         {editable && (
           <input
             type="range"
@@ -69,14 +111,14 @@ export function SpectrumPlay({ view, dispatch, me, isHost }: PlayProps<SpecView,
   const scores = (
     <div className="grid grid-cols-2 gap-2">
       {view.teams.map((team, i) => (
-        <Card key={i} className={`p-3 ${i === view.activeTeam ? 'ring-2 ring-accent' : ''}`}>
+        <Card key={i} className={`p-3 ${i === view.activeTeam ? 'ring-accent ring-2' : ''}`}>
           <div className="flex justify-between">
             <b>{t('wg.team', { n: i + 1 })}</b>
             <b className="text-xl">
               {num(view.scores[i] ?? 0)}/{num(view.goal)}
             </b>
           </div>
-          <span className="text-xs text-muted">{team.map(name).join('، ')}</span>
+          <span className="text-muted text-xs">{team.map(name).join('، ')}</span>
         </Card>
       ))}
     </div>
@@ -90,7 +132,12 @@ export function SpectrumPlay({ view, dispatch, me, isHost }: PlayProps<SpecView,
           «{view.clue}»
         </Card>
       )}
-      <Dial view={view} value={view.phase === 'dial' && onActive ? local : view.dial} onChange={setDial} editable={view.phase === 'dial' && onActive} />
+      <Dial
+        view={view}
+        value={view.phase === 'dial' && onActive ? local : view.dial}
+        onChange={setDial}
+        editable={view.phase === 'dial' && onActive}
+      />
       {view.phase === 'clue' &&
         (amPsychic ? (
           <form
@@ -102,7 +149,13 @@ export function SpectrumPlay({ view, dispatch, me, isHost }: PlayProps<SpecView,
             }}
           >
             <Notice>{t('spec.psychicHint')}</Notice>
-            <TextField value={clue} onChange={(e) => setClue(e.target.value)} placeholder={t('spec.cluePlaceholder')} data-testid="spec-clue-input" aria-label={t('spec.cluePlaceholder')} />
+            <TextField
+              value={clue}
+              onChange={(e) => setClue(e.target.value)}
+              placeholder={t('spec.cluePlaceholder')}
+              data-testid="spec-clue-input"
+              aria-label={t('spec.cluePlaceholder')}
+            />
             <Button type="submit" size="lg" disabled={!clue.trim()} data-testid="spec-send">
               {t('cw.giveClue')}
             </Button>
@@ -121,10 +174,20 @@ export function SpectrumPlay({ view, dispatch, me, isHost }: PlayProps<SpecView,
       {view.phase === 'counter' &&
         (onOther ? (
           <div className="grid grid-cols-2 gap-2">
-            <Button size="lg" variant="secondary" onClick={() => dispatch({ type: 'counter', side: 'right' })} data-testid="spec-right">
+            <Button
+              size="lg"
+              variant="secondary"
+              onClick={() => dispatch({ type: 'counter', side: 'right' })}
+              data-testid="spec-right"
+            >
               {t('spec.moreRight', { s: view.spectrum.right })}
             </Button>
-            <Button size="lg" variant="secondary" onClick={() => dispatch({ type: 'counter', side: 'left' })} data-testid="spec-left">
+            <Button
+              size="lg"
+              variant="secondary"
+              onClick={() => dispatch({ type: 'counter', side: 'left' })}
+              data-testid="spec-left"
+            >
               {t('spec.moreLeft', { s: view.spectrum.left })}
             </Button>
           </div>

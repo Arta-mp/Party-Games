@@ -38,7 +38,11 @@ export class GameRunner {
   ): GameRunner {
     const parsed = module.configSchema.parse(config);
     const rng = createRng(`${opts.seed}:setup`);
-    const state = module.setup(players, parsed, rng, { now: opts.now, hostId: opts.hostId, local: opts.local });
+    const state = module.setup(players, parsed, rng, {
+      now: opts.now,
+      hostId: opts.hostId,
+      local: opts.local,
+    });
     return new GameRunner(module, state, parsed, opts.seed, 0, players, opts.hostId, opts.local);
   }
 

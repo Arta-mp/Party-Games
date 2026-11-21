@@ -47,7 +47,7 @@ export function WordGrid({
             data-testid={`cell-${i}`}
             data-color={open ? c : undefined}
             className={cn(
-              'relative grid min-h-14 place-items-center rounded-lg bg-surface-2 p-0.5 text-center text-[11px] leading-4 font-bold break-words transition active:scale-95 disabled:active:scale-100',
+              'bg-surface-2 relative grid min-h-14 place-items-center rounded-lg p-0.5 text-center text-[11px] leading-4 font-bold break-words transition active:scale-95 disabled:active:scale-100',
               open && c ? FILL[c] : c ? HINT[c] : '',
               open && 'opacity-90',
             )}

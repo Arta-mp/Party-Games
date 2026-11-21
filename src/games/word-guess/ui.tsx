@@ -11,7 +11,15 @@ import { useTilt } from './tilt';
 
 const TEAM_COLORS = ['bg-team-a', 'bg-team-b', 'bg-success', 'bg-brand'];
 
-type Cfg = { teams: number; turnSeconds: number; rounds: number; skipPenalty: boolean; categories?: string[]; difficulty?: number; packs: never };
+type Cfg = {
+  teams: number;
+  turnSeconds: number;
+  rounds: number;
+  skipPenalty: boolean;
+  categories?: string[];
+  difficulty?: number;
+  packs: never;
+};
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function makeWGSetup(id: string): ComponentType<SetupProps<any>> {
@@ -19,13 +27,47 @@ export function makeWGSetup(id: string): ComponentType<SetupProps<any>> {
     const t = useT();
     const num = useNum();
     const set = (p: Partial<Cfg>) => onChange({ ...config, ...p });
-    const cats = useMemo(() => [...new Set(itemsOf('words', config.packs).map((w) => w.category).filter(Boolean) as string[])], [config.packs]);
+    const cats = useMemo(
+      () => [
+        ...new Set(
+          itemsOf('words', config.packs)
+            .map((w) => w.category)
+            .filter(Boolean) as string[],
+        ),
+      ],
+      [config.packs],
+    );
     return (
       <div className="flex flex-col gap-3">
-        <Stepper label={t('wg.cfg.teams')} value={config.teams} min={id === 'word.forehead' ? 0 : 2} max={4} format={(v) => (v === 0 ? t('wg.cfg.solo') : num(v))} onChange={(teams) => set({ teams })} />
-        <Stepper label={t('wg.cfg.turn')} value={config.turnSeconds} min={20} max={300} step={10} format={(v) => t('common.seconds', { n: num(v) })} onChange={(turnSeconds) => set({ turnSeconds })} />
-        <Stepper label={t('wg.cfg.rounds')} value={config.rounds} min={1} max={5} onChange={(rounds) => set({ rounds })} />
-        <Toggle label={t('wg.cfg.skipPenalty')} checked={config.skipPenalty} onChange={(skipPenalty) => set({ skipPenalty })} />
+        <Stepper
+          label={t('wg.cfg.teams')}
+          value={config.teams}
+          min={id === 'word.forehead' ? 0 : 2}
+          max={4}
+          format={(v) => (v === 0 ? t('wg.cfg.solo') : num(v))}
+          onChange={(teams) => set({ teams })}
+        />
+        <Stepper
+          label={t('wg.cfg.turn')}
+          value={config.turnSeconds}
+          min={20}
+          max={300}
+          step={10}
+          format={(v) => t('common.seconds', { n: num(v) })}
+          onChange={(turnSeconds) => set({ turnSeconds })}
+        />
+        <Stepper
+          label={t('wg.cfg.rounds')}
+          value={config.rounds}
+          min={1}
+          max={5}
+          onChange={(rounds) => set({ rounds })}
+        />
+        <Toggle
+          label={t('wg.cfg.skipPenalty')}
+          checked={config.skipPenalty}
+          onChange={(skipPenalty) => set({ skipPenalty })}
+        />
         {config.difficulty != null && (
           <Segmented
             label={t('wg.cfg.difficulty')}
@@ -39,14 +81,31 @@ export function makeWGSetup(id: string): ComponentType<SetupProps<any>> {
             {cats.map((c) => {
               const on = config.categories!.includes(c);
               return (
-                <button key={c} type="button" aria-pressed={on} onClick={() => set({ categories: on ? config.categories!.filter((x) => x !== c) : [...config.categories!, c] })} className={cn('h-10 rounded-full border px-3 text-sm font-bold', on ? 'border-accent bg-accent/20' : 'border-border text-muted')}>
+                <button
+                  key={c}
+                  type="button"
+                  aria-pressed={on}
+                  onClick={() =>
+                    set({
+                      categories: on ? config.categories!.filter((x) => x !== c) : [...config.categories!, c],
+                    })
+                  }
+                  className={cn(
+                    'h-10 rounded-full border px-3 text-sm font-bold',
+                    on ? 'border-accent bg-accent/20' : 'border-border text-muted',
+                  )}
+                >
                   {c}
                 </button>
               );
             })}
           </div>
         )}
-        <PackPicker kind={id === 'word.forbidden' ? 'cards' : 'words'} value={config.packs} onChange={(packs) => set({ packs: packs as never })} />
+        <PackPicker
+          kind={id === 'word.forbidden' ? 'cards' : 'words'}
+          value={config.packs}
+          onChange={(packs) => set({ packs: packs as never })}
+        />
       </div>
     );
   };
@@ -58,17 +117,31 @@ export function Teams({ view }: { view: WGView }) {
   const name = (id: string) => view.players.find((p) => p.id === id)?.name ?? '';
   const solo = view.teams.every((x) => x.length === 1);
   return (
-    <div className={cn('grid gap-2', solo ? 'grid-cols-2' : view.teams.length > 2 ? 'grid-cols-2' : 'grid-cols-2')} data-testid="teams">
+    <div
+      className={cn(
+        'grid gap-2',
+        solo ? 'grid-cols-2' : view.teams.length > 2 ? 'grid-cols-2' : 'grid-cols-2',
+      )}
+      data-testid="teams"
+    >
       {view.teams.map((team, i) => (
-        <Card key={i} className={cn('flex flex-col gap-1 p-3', i === view.performerTeam && view.phase !== 'over' && 'ring-2 ring-accent')}>
+        <Card
+          key={i}
+          className={cn(
+            'flex flex-col gap-1 p-3',
+            i === view.performerTeam && view.phase !== 'over' && 'ring-accent ring-2',
+          )}
+        >
           <div className="flex items-center justify-between">
             <span className="flex items-center gap-2 text-sm font-black">
               <span className={cn('size-3 rounded-full', TEAM_COLORS[i % 4])} />
               {solo ? name(team[0]!) : t('wg.team', { n: i + 1 })}
             </span>
-            <b className="text-xl" data-testid={`score-${i}`}>{num(view.scores[i] ?? 0)}</b>
+            <b className="text-xl" data-testid={`score-${i}`}>
+              {num(view.scores[i] ?? 0)}
+            </b>
           </div>
-          {!solo && <span className="text-xs text-muted">{team.map(name).join('، ')}</span>}
+          {!solo && <span className="text-muted text-xs">{team.map(name).join('، ')}</span>}
         </Card>
       ))}
     </div>
@@ -92,8 +165,10 @@ export function WordGuessPlay({ view, dispatch, me, isHost, now }: PlayProps<WGV
         <Card className="flex flex-col items-center gap-3 py-6 text-center">
           <Badge>{t('wg.turnOf', { n: view.turn + 1, total: view.totalTurns })}</Badge>
           <Avatar name={performerName} size={72} />
-          <h2 className="text-2xl font-black">{t(view.mode === 'word.forehead' ? 'wg.guesser' : 'wg.performer', { name: performerName })}</h2>
-          <p className="text-sm text-muted">{t(`wg.readyHint.${view.mode}`)}</p>
+          <h2 className="text-2xl font-black">
+            {t(view.mode === 'word.forehead' ? 'wg.guesser' : 'wg.performer', { name: performerName })}
+          </h2>
+          <p className="text-muted text-sm">{t(`wg.readyHint.${view.mode}`)}</p>
         </Card>
         {(amPerformer || isHost) && (
           <Button size="xl" onClick={() => dispatch({ type: 'start' })} data-testid="wg-start">
@@ -113,18 +188,32 @@ export function WordGuessPlay({ view, dispatch, me, isHost, now }: PlayProps<WGV
     const opponent = !amPerformer && view.myTeam >= 0 && view.myTeam !== view.performerTeam;
     return (
       <div className="flex flex-col gap-3">
-        {view.endsAt && <Timer endsAt={view.endsAt} total={view.turnSeconds} now={now} size={130} onTick={(s) => s > 0 && play('tick')} />}
+        {view.endsAt && (
+          <Timer
+            endsAt={view.endsAt}
+            total={view.turnSeconds}
+            now={now}
+            size={130}
+            onTick={(s) => s > 0 && play('tick')}
+          />
+        )}
         {view.card ? (
-          <Card className={cn('flex flex-col items-center gap-3 border-2 border-accent py-8', view.mode === 'word.forehead' && 'py-14')} data-testid="wg-card">
+          <Card
+            className={cn(
+              'border-accent flex flex-col items-center gap-3 border-2 py-8',
+              view.mode === 'word.forehead' && 'py-14',
+            )}
+            data-testid="wg-card"
+          >
             {view.card.category && <Badge>{view.card.category}</Badge>}
             <BigWord className={view.mode === 'word.forehead' ? 'text-6xl' : ''}>
               <span data-testid="wg-word">{view.card.word}</span>
             </BigWord>
             {view.card.extra.length > 0 && (
-              <div className="flex flex-col items-center gap-1 border-t border-border pt-3">
-                <span className="text-xs text-danger">{t('wg.forbidden')}</span>
+              <div className="border-border flex flex-col items-center gap-1 border-t pt-3">
+                <span className="text-danger text-xs">{t('wg.forbidden')}</span>
                 {view.card.extra.map((x) => (
-                  <span key={x} className="font-bold text-muted">
+                  <span key={x} className="text-muted font-bold">
                     {x}
                   </span>
                 ))}
@@ -132,7 +221,9 @@ export function WordGuessPlay({ view, dispatch, me, isHost, now }: PlayProps<WGV
             )}
           </Card>
         ) : (
-          <Card className="py-10 text-center text-2xl font-black">🤔 {t('wg.guessNow', { name: performerName })}</Card>
+          <Card className="py-10 text-center text-2xl font-black">
+            🤔 {t('wg.guessNow', { name: performerName })}
+          </Card>
         )}
         {canControl && (
           <div className="grid grid-cols-2 gap-2">
@@ -145,11 +236,18 @@ export function WordGuessPlay({ view, dispatch, me, isHost, now }: PlayProps<WGV
           </div>
         )}
         {view.allowBuzz && (opponent || view.local) && (
-          <Button size="xl" variant="danger" onClick={() => (dispatch({ type: 'buzz' }), play('buzz'))} data-testid="wg-buzz">
+          <Button
+            size="xl"
+            variant="danger"
+            onClick={() => (dispatch({ type: 'buzz' }), play('buzz'))}
+            data-testid="wg-buzz"
+          >
             📢 {t('wg.buzz')}
           </Button>
         )}
-        {view.mode === 'word.forehead' && canControl && <p className="text-center text-xs text-muted">{t('wg.tiltHint')}</p>}
+        {view.mode === 'word.forehead' && canControl && (
+          <p className="text-muted text-center text-xs">{t('wg.tiltHint')}</p>
+        )}
         <Teams view={view} />
       </div>
     );
@@ -162,12 +260,20 @@ export function WordGuessPlay({ view, dispatch, me, isHost, now }: PlayProps<WGV
       <Card className="flex flex-col gap-1" data-testid="wg-log">
         {view.log.length === 0 && <span className="text-muted">—</span>}
         {view.log.map((l, i) => (
-          <span key={i} className={cn('flex justify-between', l.result === 'correct' ? 'text-success' : 'text-muted line-through')}>
+          <span
+            key={i}
+            className={cn(
+              'flex justify-between',
+              l.result === 'correct' ? 'text-success' : 'text-muted line-through',
+            )}
+          >
             {l.word}
             <span>{l.result === 'correct' ? '✅' : l.result === 'buzz' ? '📢' : '⏭'}</span>
           </span>
         ))}
-        <b className="mt-1">{t('wg.turnPoints', { n: num(view.log.filter((l) => l.result === 'correct').length) })}</b>
+        <b className="mt-1">
+          {t('wg.turnPoints', { n: num(view.log.filter((l) => l.result === 'correct').length) })}
+        </b>
       </Card>
       <Teams view={view} />
       {(amPerformer || isHost) && (

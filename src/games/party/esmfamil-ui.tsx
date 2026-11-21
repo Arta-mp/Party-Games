@@ -18,7 +18,13 @@ export function EsmFamilSetup({ config, onChange }: SetupProps<EsmConfig>) {
   };
   return (
     <div className="flex flex-col gap-3">
-      <Stepper label={t('esm.cfg.rounds')} value={config.rounds} min={1} max={10} onChange={(rounds) => onChange({ ...config, rounds })} />
+      <Stepper
+        label={t('esm.cfg.rounds')}
+        value={config.rounds}
+        min={1}
+        max={10}
+        onChange={(rounds) => onChange({ ...config, rounds })}
+      />
       <Stepper
         label={t('esm.cfg.time')}
         value={config.roundSeconds}
@@ -28,9 +34,20 @@ export function EsmFamilSetup({ config, onChange }: SetupProps<EsmConfig>) {
         format={(v) => t('common.seconds', { n: num(v) })}
         onChange={(roundSeconds) => onChange({ ...config, roundSeconds })}
       />
-      <Stepper label={t('esm.cfg.grace')} value={config.stopGraceSeconds} min={0} max={30} onChange={(stopGraceSeconds) => onChange({ ...config, stopGraceSeconds })} />
-      <Toggle label={t('esm.cfg.hard')} hint="ث ذ ژ ص ض ط ظ ع غ" checked={config.hardLetters} onChange={(hardLetters) => onChange({ ...config, hardLetters })} />
-      <span className="text-sm font-bold text-muted">{t('esm.cfg.columns')}</span>
+      <Stepper
+        label={t('esm.cfg.grace')}
+        value={config.stopGraceSeconds}
+        min={0}
+        max={30}
+        onChange={(stopGraceSeconds) => onChange({ ...config, stopGraceSeconds })}
+      />
+      <Toggle
+        label={t('esm.cfg.hard')}
+        hint="ث ذ ژ ص ض ط ظ ع غ"
+        checked={config.hardLetters}
+        onChange={(hardLetters) => onChange({ ...config, hardLetters })}
+      />
+      <span className="text-muted text-sm font-bold">{t('esm.cfg.columns')}</span>
       <div className="flex flex-wrap gap-2">
         {all.map((c) => (
           <button
@@ -38,7 +55,10 @@ export function EsmFamilSetup({ config, onChange }: SetupProps<EsmConfig>) {
             type="button"
             aria-pressed={config.columns.includes(c)}
             onClick={() => toggle(c)}
-            className={cn('h-10 rounded-full border px-3 text-sm font-bold', config.columns.includes(c) ? 'border-accent bg-accent/20' : 'border-border text-muted')}
+            className={cn(
+              'h-10 rounded-full border px-3 text-sm font-bold',
+              config.columns.includes(c) ? 'border-accent bg-accent/20' : 'border-border text-muted',
+            )}
           >
             {c}
           </button>
@@ -48,7 +68,15 @@ export function EsmFamilSetup({ config, onChange }: SetupProps<EsmConfig>) {
   );
 }
 
-function Writer({ view, dispatch, now }: { view: EsmView; dispatch: (a: EsmAction) => void; now: () => number }) {
+function Writer({
+  view,
+  dispatch,
+  now,
+}: {
+  view: EsmView;
+  dispatch: (a: EsmAction) => void;
+  now: () => number;
+}) {
   const t = useT();
   const [answers, setAnswers] = useState<string[]>(() => view.myAnswers ?? view.columns.map(() => ''));
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -76,14 +104,26 @@ function Writer({ view, dispatch, now }: { view: EsmView; dispatch: (a: EsmActio
     <div className="flex flex-col gap-3">
       <div className="flex items-center gap-4">
         <Card className="grid size-24 shrink-0 place-items-center p-0">
-          <BigWord className="text-6xl text-accent">
+          <BigWord className="text-accent text-6xl">
             <span data-testid="letter">{view.letter}</span>
           </BigWord>
         </Card>
-        <div className="flex-1">{endsAt && <Timer endsAt={endsAt} total={Math.max(1, Math.round((endsAt - now()) / 1000))} now={now} size={96} onTick={(s) => s > 0 && s <= 5 && play('tick')} />}</div>
+        <div className="flex-1">
+          {endsAt && (
+            <Timer
+              endsAt={endsAt}
+              total={Math.max(1, Math.round((endsAt - now()) / 1000))}
+              now={now}
+              size={96}
+              onTick={(s) => s > 0 && s <= 5 && play('tick')}
+            />
+          )}
+        </div>
       </div>
       {view.stoppedBy && (
-        <Notice tone="danger">{t('esm.stopped', { name: view.players.find((p) => p.id === view.stoppedBy)?.name ?? '' })}</Notice>
+        <Notice tone="danger">
+          {t('esm.stopped', { name: view.players.find((p) => p.id === view.stoppedBy)?.name ?? '' })}
+        </Notice>
       )}
       <Badge>{t('esm.roundOf', { n: view.round, total: view.rounds })}</Badge>
       {view.columns.map((c, i) => (
@@ -121,11 +161,14 @@ export function EsmFamilPlay({ view, dispatch, me, isHost, now }: PlayProps<EsmV
   const name = (id: string) => view.players.find((p) => p.id === id)?.name ?? '';
 
   if (view.phase === 'write') {
-    if (me && !view.submitted.includes(me)) return <Writer key={`${view.round}-${me}`} view={view} dispatch={dispatch} now={now} />;
+    if (me && !view.submitted.includes(me))
+      return <Writer key={`${view.round}-${me}`} view={view} dispatch={dispatch} now={now} />;
     return (
       <div className="flex flex-col gap-3">
         <Notice>{t('esm.waitWriters', { n: view.submitted.length, total: view.players.length })}</Notice>
-        {view.endsAt && <Timer endsAt={view.endsAt} total={Math.round((view.endsAt - now()) / 1000)} now={now} />}
+        {view.endsAt && (
+          <Timer endsAt={view.endsAt} total={Math.round((view.endsAt - now()) / 1000)} now={now} />
+        )}
       </div>
     );
   }
@@ -152,17 +195,26 @@ export function EsmFamilPlay({ view, dispatch, me, isHost, now }: PlayProps<EsmV
                 key={row.player}
                 type="button"
                 disabled={view.phase !== 'judge' || !canReject(row.player) || !ans.trim()}
-                onClick={() => dispatch({ type: 'reject', player: row.player, col: ci, reject: !row.myRejects[ci] && !(view.local && row.rejectVotes[ci]! > 0) })}
+                onClick={() =>
+                  dispatch({
+                    type: 'reject',
+                    player: row.player,
+                    col: ci,
+                    reject: !row.myRejects[ci] && !(view.local && row.rejectVotes[ci]! > 0),
+                  })
+                }
                 className={cn(
                   'flex min-h-11 items-center gap-2 rounded-xl px-3 text-start text-sm',
                   row.valid[ci] ? 'bg-surface-2' : 'bg-danger/10 text-muted line-through',
-                  row.myRejects[ci] && 'ring-2 ring-danger',
+                  row.myRejects[ci] && 'ring-danger ring-2',
                 )}
                 data-testid={`judge-${name(row.player)}-${ci}`}
               >
-                <span className="w-16 truncate text-xs text-muted no-underline">{name(row.player)}</span>
+                <span className="text-muted w-16 truncate text-xs no-underline">{name(row.player)}</span>
                 <span className="flex-1 truncate font-bold">{ans || '—'}</span>
-                {row.rejectVotes[ci]! > 0 && !view.local && <span className="text-xs text-danger">👎{num(row.rejectVotes[ci]!)}</span>}
+                {row.rejectVotes[ci]! > 0 && !view.local && (
+                  <span className="text-danger text-xs">👎{num(row.rejectVotes[ci]!)}</span>
+                )}
                 {score != null && <b className="text-accent no-underline">{num(score)}</b>}
               </button>
             );

@@ -5,7 +5,20 @@ import { useCustom } from '@/custom/store';
 import { useNum, useT, useTm } from '@/i18n';
 import { play } from '@/lib/fx';
 import { cn } from '@/ui/cn';
-import { Badge, Button, Card, HoldReveal, Notice, PlayerChip, PlayerPicker, SectionTitle, Segmented, Stepper, Timer, Toggle } from '@/ui/kit';
+import {
+  Badge,
+  Button,
+  Card,
+  HoldReveal,
+  Notice,
+  PlayerChip,
+  PlayerPicker,
+  SectionTitle,
+  Segmented,
+  Stepper,
+  Timer,
+  Toggle,
+} from '@/ui/kit';
 import { SKIP, type MafiaAction, type MafiaConfig, type MafiaKind, type MafiaView } from './core';
 import { balance, defaultComposition, rolePool, type Composition } from './roles';
 
@@ -18,15 +31,23 @@ export function BalanceMeter({ comp }: { comp: Composition }) {
   const pct = Math.max(0, Math.min(100, 50 + b * 4));
   return (
     <div className="flex flex-col gap-1" data-testid="balance">
-      <div className="flex justify-between text-xs text-muted">
+      <div className="text-muted flex justify-between text-xs">
         <span>🔫 {t('mafia.balance.mafia')}</span>
         <b className={cn(Math.abs(b) <= 3 ? 'text-success' : 'text-brand')}>
-          {t('mafia.balance.value', { n: num(b) })} · {Math.abs(b) <= 3 ? t('mafia.balance.ok') : b > 0 ? t('mafia.balance.town') : t('mafia.balance.mafiaSide')}
+          {t('mafia.balance.value', { n: num(b) })} ·{' '}
+          {Math.abs(b) <= 3
+            ? t('mafia.balance.ok')
+            : b > 0
+              ? t('mafia.balance.town')
+              : t('mafia.balance.mafiaSide')}
         </b>
         <span>{t('mafia.balance.town')} 🙂</span>
       </div>
-      <div className="relative h-3 rounded-full bg-gradient-to-l from-success/60 via-surface-2 to-danger/60">
-        <span className="absolute top-1/2 size-5 -translate-y-1/2 rounded-full border-2 border-white bg-accent transition-all" style={{ insetInlineEnd: `calc(${pct}% - 10px)` }} />
+      <div className="from-success/60 via-surface-2 to-danger/60 relative h-3 rounded-full bg-gradient-to-l">
+        <span
+          className="bg-accent absolute top-1/2 size-5 -translate-y-1/2 rounded-full border-2 border-white transition-all"
+          style={{ insetInlineEnd: `calc(${pct}% - 10px)` }}
+        />
       </div>
     </div>
   );
@@ -59,15 +80,26 @@ export function makeMafiaSetup(kind: MafiaKind): ComponentType<SetupProps<MafiaC
           label={t('mafia.cfg.autoComp')}
           hint={t('mafia.cfg.autoCompHint', { n: seats })}
           checked={config.composition == null}
-          onChange={(auto) => onChange({ ...config, composition: auto ? null : defaultComposition(packKind, seats) })}
+          onChange={(auto) =>
+            onChange({ ...config, composition: auto ? null : defaultComposition(packKind, seats) })
+          }
         />
         <BalanceMeter comp={comp} />
         {config.composition != null && (
           <div className="flex flex-col gap-2" data-testid="composition">
             {pool.map((r) => (
-              <Stepper key={r.id} label={`${r.emoji} ${r.nameFa}`} value={countOf(r.id)} min={0} max={12} onChange={(n) => setCount(r, n)} />
+              <Stepper
+                key={r.id}
+                label={`${r.emoji} ${r.nameFa}`}
+                value={countOf(r.id)}
+                min={0}
+                max={12}
+                onChange={(n) => setCount(r, n)}
+              />
             ))}
-            <p className="text-xs text-muted">{t('mafia.cfg.assigned', { n: num(assigned), seats: num(seats) })}</p>
+            <p className="text-muted text-xs">
+              {t('mafia.cfg.assigned', { n: num(assigned), seats: num(seats) })}
+            </p>
           </div>
         )}
         {config.composition == null && (
@@ -92,7 +124,11 @@ export function makeMafiaSetup(kind: MafiaKind): ComponentType<SetupProps<MafiaC
         )}
         {kind !== 'moderated' && (
           <>
-            <Toggle label={t('mafia.cfg.reveal')} checked={config.revealOnDeath} onChange={(revealOnDeath) => onChange({ ...config, revealOnDeath })} />
+            <Toggle
+              label={t('mafia.cfg.reveal')}
+              checked={config.revealOnDeath}
+              onChange={(revealOnDeath) => onChange({ ...config, revealOnDeath })}
+            />
             <Segmented
               label={t('hw.cfg.voteMode')}
               value={config.voteMode}
@@ -133,11 +169,14 @@ function RoleCard({ view }: { view: MafiaView }) {
   return (
     <div className="flex flex-col items-center gap-2 text-center" data-testid="role-card">
       <span className="text-5xl">{me.role.emoji}</span>
-      <span className={cn('text-2xl font-black', me.role.team === 'mafia' && 'text-danger')} data-testid="role-name">
+      <span
+        className={cn('text-2xl font-black', me.role.team === 'mafia' && 'text-danger')}
+        data-testid="role-name"
+      >
         {me.role.nameFa}
       </span>
       <Badge>{t(`mafia.team.${me.role.team}`)}</Badge>
-      <p className="max-w-xs text-xs leading-6 text-muted">{me.role.descriptionFa}</p>
+      <p className="text-muted max-w-xs text-xs leading-6">{me.role.descriptionFa}</p>
       {me.teammates.length > 0 && (
         <div className="flex flex-wrap justify-center gap-1">
           {me.teammates.map((m) => (
@@ -179,16 +218,26 @@ export function MafiaPlay({ view, dispatch, me, isHost, now, mode }: PlayProps<M
 
   const header = (
     <div className="flex flex-wrap gap-2">
-      {view.night > 0 && <Badge>{view.phase === 'night' ? `🌙 ${t('mafia.nightN', { n: view.night })}` : `☀️ ${t('mafia.dayN', { n: view.night })}`}</Badge>}
+      {view.night > 0 && (
+        <Badge>
+          {view.phase === 'night'
+            ? `🌙 ${t('mafia.nightN', { n: view.night })}`
+            : `☀️ ${t('mafia.dayN', { n: view.night })}`}
+        </Badge>
+      )}
       <Badge>{t('mafia.aliveN', { n: view.alive.length })}</Badge>
-      {view.me && !amAlive && view.phase !== 'reveal' && <Badge className="bg-danger/20 text-text">💀 {t('mafia.youDead')}</Badge>}
+      {view.me && !amAlive && view.phase !== 'reveal' && (
+        <Badge className="bg-danger/20 text-text">💀 {t('mafia.youDead')}</Badge>
+      )}
     </div>
   );
 
   // ---------------------------------------------------- reveal
   if (view.phase === 'reveal') {
-    if (amModerator) return <Notice>{t('mafia.youModerate', { n: view.acked.length, total: view.seats.length })}</Notice>;
-    if (!view.me) return <Notice>{t('hw.waitingOthers', { n: view.acked.length, total: view.seats.length })}</Notice>;
+    if (amModerator)
+      return <Notice>{t('mafia.youModerate', { n: view.acked.length, total: view.seats.length })}</Notice>;
+    if (!view.me)
+      return <Notice>{t('hw.waitingOthers', { n: view.acked.length, total: view.seats.length })}</Notice>;
     const acked = view.acked.includes(me!);
     return (
       <div className="flex flex-col gap-4">
@@ -215,11 +264,19 @@ export function MafiaPlay({ view, dispatch, me, isHost, now, mode }: PlayProps<M
           <SectionTitle>{t('mafia.mod.night')}</SectionTitle>
           <ol className="flex flex-col gap-2">
             {view.script.order.map((step, i) => (
-              <li key={i} className="flex items-center gap-2 rounded-2xl bg-surface-2 p-3 text-sm">
-                <span className="grid size-7 place-items-center rounded-full bg-accent font-black text-accent-ink">{num(i + 1)}</span>
+              <li key={i} className="bg-surface-2 flex items-center gap-2 rounded-2xl p-3 text-sm">
+                <span className="bg-accent text-accent-ink grid size-7 place-items-center rounded-full font-black">
+                  {num(i + 1)}
+                </span>
                 <span className="flex-1">
-                  {step.emoji} <b>{['citizens', 'mafia', 'neutral'].includes(step.roleName) ? t(`mafia.team.${step.roleName}`) : step.roleName}</b> — {t(`mafia.action.${step.action}`)}
-                  <span className="block text-xs text-muted">{step.players.map(name).join('، ')}</span>
+                  {step.emoji}{' '}
+                  <b>
+                    {['citizens', 'mafia', 'neutral'].includes(step.roleName)
+                      ? t(`mafia.team.${step.roleName}`)
+                      : step.roleName}
+                  </b>{' '}
+                  — {t(`mafia.action.${step.action}`)}
+                  <span className="text-muted block text-xs">{step.players.map(name).join('، ')}</span>
                 </span>
               </li>
             ))}
@@ -231,14 +288,24 @@ export function MafiaPlay({ view, dispatch, me, isHost, now, mode }: PlayProps<M
               name={name(r.id)}
               muted={!view.alive.includes(r.id)}
               onClick={() => dispatch({ type: 'modToggle', target: r.id })}
-              badges={<Badge className={r.team === 'mafia' ? 'bg-danger/20 text-text' : ''}>{r.emoji} {r.roleName}</Badge>}
+              badges={
+                <Badge className={r.team === 'mafia' ? 'bg-danger/20 text-text' : ''}>
+                  {r.emoji} {r.roleName}
+                </Badge>
+              }
               trailing={view.alive.includes(r.id) ? '❤️' : '💀'}
             />
           ))}
           <SectionTitle>{t('mafia.mod.end')}</SectionTitle>
           <div className="grid grid-cols-3 gap-2">
             {(['citizens', 'mafia', 'neutral'] as const).map((team) => (
-              <Button key={team} variant="secondary" size="sm" onClick={() => dispatch({ type: 'modEnd', team })} data-testid={`mod-end-${team}`}>
+              <Button
+                key={team}
+                variant="secondary"
+                size="sm"
+                onClick={() => dispatch({ type: 'modEnd', team })}
+                data-testid={`mod-end-${team}`}
+              >
                 {t(`mafia.team.${team}`)}
               </Button>
             ))}
@@ -265,7 +332,10 @@ export function MafiaPlay({ view, dispatch, me, isHost, now, mode }: PlayProps<M
   // ---------------------------------------------------- night
   const lynchInfo = view.lastLynch && (
     <Notice tone="warn">
-      {view.lastLynch.id ? t('mafia.lynched', { name: name(view.lastLynch.id) }) + (view.lastLynch.role ? ` (${view.lastLynch.role})` : '') : t('mafia.noLynch')}
+      {view.lastLynch.id
+        ? t('mafia.lynched', { name: name(view.lastLynch.id) }) +
+          (view.lastLynch.role ? ` (${view.lastLynch.role})` : '')
+        : t('mafia.noLynch')}
     </Notice>
   );
 
@@ -293,7 +363,13 @@ export function MafiaPlay({ view, dispatch, me, isHost, now, mode }: PlayProps<M
     const abilities = view.me.abilities;
     const current = abilities.find((a) => a.index === abilityIdx) ?? abilities[0];
     const targets = current
-      ? alive.filter((p) => (current.target === 'self' ? p.id === me : current.target === 'other' || current.target === 'teammate' ? p.id !== me : true))
+      ? alive.filter((p) =>
+          current.target === 'self'
+            ? p.id === me
+            : current.target === 'other' || current.target === 'teammate'
+              ? p.id !== me
+              : true,
+        )
       : [];
     return (
       <div className="flex flex-col gap-3">
@@ -309,12 +385,17 @@ export function MafiaPlay({ view, dispatch, me, isHost, now, mode }: PlayProps<M
               <Segmented
                 value={String(current.index)}
                 onChange={(v) => setAbilityIdx(Number(v))}
-                options={abilities.map((a) => ({ value: String(a.index), label: t(`mafia.action.${a.action}`) }))}
+                options={abilities.map((a) => ({
+                  value: String(a.index),
+                  label: t(`mafia.action.${a.action}`),
+                }))}
               />
             )}
             <h2 className="text-xl font-black">
               {t(`mafia.actionPrompt.${current.action}`)}
-              {current.usesLeft != null && <Badge className="ms-2">{t('mafia.usesLeft', { n: current.usesLeft })}</Badge>}
+              {current.usesLeft != null && (
+                <Badge className="ms-2">{t('mafia.usesLeft', { n: current.usesLeft })}</Badge>
+              )}
             </h2>
             {view.me.teamPicks.length > 0 && (
               <div className="flex flex-wrap gap-1">
@@ -339,14 +420,22 @@ export function MafiaPlay({ view, dispatch, me, isHost, now, mode }: PlayProps<M
             >
               {t('common.confirm')}
             </Button>
-            <Button variant="ghost" onClick={() => dispatch({ type: 'night', ability: -1, target: null })} data-testid="night-skip">
+            <Button
+              variant="ghost"
+              onClick={() => dispatch({ type: 'night', ability: -1, target: null })}
+              data-testid="night-skip"
+            >
               {t('mafia.skipNight')}
             </Button>
           </>
         ) : (
           <>
-            <Card className="text-center text-muted">{t('mafia.noAbility')}</Card>
-            <Button size="lg" onClick={() => dispatch({ type: 'night', ability: -1, target: null })} data-testid="night-skip">
+            <Card className="text-muted text-center">{t('mafia.noAbility')}</Card>
+            <Button
+              size="lg"
+              onClick={() => dispatch({ type: 'night', ability: -1, target: null })}
+              data-testid="night-skip"
+            >
               😴 {t('mafia.sleep')}
             </Button>
           </>
@@ -365,7 +454,7 @@ export function MafiaPlay({ view, dispatch, me, isHost, now, mode }: PlayProps<M
           💀 {name(k.id)} {k.role && `(${k.role})`}
         </p>
       ))}
-      {view.dawn.saved > 0 && <p className="text-sm text-muted">{t('mafia.someoneSaved')}</p>}
+      {view.dawn.saved > 0 && <p className="text-muted text-sm">{t('mafia.someoneSaved')}</p>}
       {view.dawn.revealed.map((r) => (
         <p key={r.id} className="text-sm">
           🔦 {t('mafia.revealed', { name: name(r.id), role: r.role })}
@@ -397,12 +486,19 @@ export function MafiaPlay({ view, dispatch, me, isHost, now, mode }: PlayProps<M
   }
 
   if (view.phase === 'revenge') {
-    if (me !== view.revengeBy) return <Notice tone="warn">{t('mafia.revengeWait', { name: name(view.revengeBy) })}</Notice>;
+    if (me !== view.revengeBy)
+      return <Notice tone="warn">{t('mafia.revengeWait', { name: name(view.revengeBy) })}</Notice>;
     return (
       <div className="flex flex-col gap-3">
         <h2 className="text-xl font-black">{t('mafia.revengePick')}</h2>
         <PlayerPicker players={alive} value={pick} onChange={setPick} />
-        <Button size="lg" variant="danger" disabled={!pick} onClick={() => pick && dispatch({ type: 'revenge', target: pick })} data-testid="revenge">
+        <Button
+          size="lg"
+          variant="danger"
+          disabled={!pick}
+          onClick={() => pick && dispatch({ type: 'revenge', target: pick })}
+          data-testid="revenge"
+        >
           🏹 {t('common.confirm')}
         </Button>
       </div>
@@ -414,7 +510,14 @@ export function MafiaPlay({ view, dispatch, me, isHost, now, mode }: PlayProps<M
       <div className="flex flex-col gap-3">
         {header}
         {view.me?.silenced && <Notice tone="danger">🤐 {t('mafia.youSilenced')}</Notice>}
-        {view.endsAt && <Timer endsAt={view.endsAt} total={Math.round((view.endsAt - now()) / 1000)} now={now} onTick={(s) => s > 0 && play('tick')} />}
+        {view.endsAt && (
+          <Timer
+            endsAt={view.endsAt}
+            total={Math.round((view.endsAt - now()) / 1000)}
+            now={now}
+            onTick={(s) => s > 0 && play('tick')}
+          />
+        )}
         {dawn}
         {view.me && (
           <HoldReveal className="h-40" label={t('hw.peekRole')}>
@@ -441,10 +544,19 @@ export function MafiaPlay({ view, dispatch, me, isHost, now, mode }: PlayProps<M
           <h2 className="text-xl font-black">{t('mafia.whoLynched')}</h2>
           <PlayerPicker players={alive} value={pick} onChange={setPick} />
           <div className="grid grid-cols-2 gap-2">
-            <Button size="lg" disabled={!pick} onClick={() => pick && (dispatch({ type: 'hostLynch', target: pick }), setPick(null))} data-testid="confirm-vote">
+            <Button
+              size="lg"
+              disabled={!pick}
+              onClick={() => pick && (dispatch({ type: 'hostLynch', target: pick }), setPick(null))}
+              data-testid="confirm-vote"
+            >
               {t('mafia.lynch')}
             </Button>
-            <Button size="lg" variant="secondary" onClick={() => dispatch({ type: 'hostLynch', target: null })}>
+            <Button
+              size="lg"
+              variant="secondary"
+              onClick={() => dispatch({ type: 'hostLynch', target: null })}
+            >
               {t('mafia.noLynchBtn')}
             </Button>
           </div>
@@ -460,10 +572,20 @@ export function MafiaPlay({ view, dispatch, me, isHost, now, mode }: PlayProps<M
             <h2 className="text-xl font-black">{t('mafia.voteWho')}</h2>
             <PlayerPicker players={alive.filter((p) => p.id !== me)} value={pick} onChange={setPick} />
             <div className="grid grid-cols-2 gap-2">
-              <Button size="lg" disabled={!pick} onClick={() => pick && (dispatch({ type: 'vote', target: pick }), setPick(null))} data-testid="confirm-vote">
+              <Button
+                size="lg"
+                disabled={!pick}
+                onClick={() => pick && (dispatch({ type: 'vote', target: pick }), setPick(null))}
+                data-testid="confirm-vote"
+              >
                 {t('hw.castVote')}
               </Button>
-              <Button size="lg" variant="secondary" onClick={() => dispatch({ type: 'vote', target: SKIP })} data-testid="vote-skip">
+              <Button
+                size="lg"
+                variant="secondary"
+                onClick={() => dispatch({ type: 'vote', target: SKIP })}
+                data-testid="vote-skip"
+              >
                 {t('mafia.abstain')}
               </Button>
             </div>
@@ -495,7 +617,7 @@ function DeadList({ view }: { view: MafiaView }) {
   const name = (id: string) => view.players.find((p) => p.id === id)?.name ?? '';
   return (
     <Card className="flex flex-col gap-1">
-      <b className="text-sm text-muted">{t('mafia.dead')}</b>
+      <b className="text-muted text-sm">{t('mafia.dead')}</b>
       {dead.map((id) => (
         <span key={id} className="text-sm">
           💀 {name(id)} {view.deadRoles.find((d) => d.id === id)?.role ?? ''}

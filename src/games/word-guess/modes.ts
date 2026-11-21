@@ -3,7 +3,19 @@ import { itemsOf } from '@/content/builtin';
 import { packSelection } from '@/content/schema';
 import type { GameModule } from '@/core/engine/types';
 import { META } from '../meta';
-import { pendingWG, reduceWG, resultWG, setupWG, viewWG, wgAction, wgBaseConfig, type Card, type WGAction, type WGState, type WGView } from './core';
+import {
+  pendingWG,
+  reduceWG,
+  resultWG,
+  setupWG,
+  viewWG,
+  wgAction,
+  wgBaseConfig,
+  type Card,
+  type WGAction,
+  type WGState,
+  type WGView,
+} from './core';
 import { makeWGSetup, WordGuessPlay } from './ui';
 
 const filters = {
@@ -14,11 +26,23 @@ const filters = {
 
 function wordsDeck(sel: z.infer<typeof packSelection>, categories: string[], difficulty: number): Card[] {
   const all = itemsOf('words', sel);
-  const filtered = all.filter((w) => (categories.length === 0 || (w.category && categories.includes(w.category))) && (!difficulty || w.difficulty === difficulty));
-  return (filtered.length ? filtered : all).map((w) => ({ word: w.word, extra: [], category: w.category ?? null }));
+  const filtered = all.filter(
+    (w) =>
+      (categories.length === 0 || (w.category && categories.includes(w.category))) &&
+      (!difficulty || w.difficulty === difficulty),
+  );
+  return (filtered.length ? filtered : all).map((w) => ({
+    word: w.word,
+    extra: [],
+    category: w.category ?? null,
+  }));
 }
 
-const charadesCfg = z.object({ ...wgBaseConfig, ...filters, packs: packSelection.default({ builtin: ['charades-fa'], custom: [] }) });
+const charadesCfg = z.object({
+  ...wgBaseConfig,
+  ...filters,
+  packs: packSelection.default({ builtin: ['charades-fa'], custom: [] }),
+});
 type CharadesCfg = z.infer<typeof charadesCfg>;
 
 function make<C extends z.infer<z.ZodObject<typeof wgBaseConfig>>>(
@@ -50,9 +74,17 @@ function make<C extends z.infer<z.ZodObject<typeof wgBaseConfig>>>(
   };
 }
 
-export const charades = make<CharadesCfg>('word.charades', charadesCfg, (c) => wordsDeck(c.packs, c.categories, c.difficulty), { visibility: 'performer+opponents', allowBuzz: false });
+export const charades = make<CharadesCfg>(
+  'word.charades',
+  charadesCfg,
+  (c) => wordsDeck(c.packs, c.categories, c.difficulty),
+  { visibility: 'performer+opponents', allowBuzz: false },
+);
 
-const forbiddenCfg = z.object({ ...wgBaseConfig, packs: packSelection.default({ builtin: ['forbidden-fa'], custom: [] }) });
+const forbiddenCfg = z.object({
+  ...wgBaseConfig,
+  packs: packSelection.default({ builtin: ['forbidden-fa'], custom: [] }),
+});
 export const forbidden = make<z.infer<typeof forbiddenCfg>>(
   'word.forbidden',
   forbiddenCfg,
@@ -60,5 +92,15 @@ export const forbidden = make<z.infer<typeof forbiddenCfg>>(
   { visibility: 'performer+opponents', allowBuzz: true },
 );
 
-const foreheadCfg = z.object({ ...wgBaseConfig, teams: z.number().int().min(0).max(4).default(0), ...filters, packs: packSelection.default({ builtin: ['topics-fa', 'charades-fa'], custom: [] }) });
-export const forehead = make<z.infer<typeof foreheadCfg>>('word.forehead', foreheadCfg, (c) => wordsDeck(c.packs, c.categories, c.difficulty), { visibility: 'everyone', allowBuzz: false });
+const foreheadCfg = z.object({
+  ...wgBaseConfig,
+  teams: z.number().int().min(0).max(4).default(0),
+  ...filters,
+  packs: packSelection.default({ builtin: ['topics-fa', 'charades-fa'], custom: [] }),
+});
+export const forehead = make<z.infer<typeof foreheadCfg>>(
+  'word.forehead',
+  foreheadCfg,
+  (c) => wordsDeck(c.packs, c.categories, c.difficulty),
+  { visibility: 'everyone', allowBuzz: false },
+);

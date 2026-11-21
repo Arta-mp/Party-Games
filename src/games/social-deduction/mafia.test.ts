@@ -3,10 +3,21 @@ import { abilityRoleSchema } from '@/custom/schemas';
 import { Driver, expectNoLeak, makePlayers } from '@/test/harness';
 import { roleOf, SKIP, type MafiaState, type MafiaView } from './core';
 import { mafiaAuto, mafiaModerated, oneNight, werewolf } from './modes';
-import { balance, checkComposition, defaultComposition, MAFIA_ROLES as R, ONE_NIGHT_ROLES, WEREWOLF_ROLES as W, type Composition } from './roles';
+import {
+  balance,
+  checkComposition,
+  defaultComposition,
+  MAFIA_ROLES as R,
+  ONE_NIGHT_ROLES,
+  WEREWOLF_ROLES as W,
+  type Composition,
+} from './roles';
 
 const comp = (...xs: [keyof typeof R, number][]): Composition => xs.map(([id, n]) => ({ role: R[id], n }));
-const who = (d: Driver, roleId: string) => Object.entries((d.state as MafiaState).assign).filter(([, r]) => r === roleId).map(([p]) => p);
+const who = (d: Driver, roleId: string) =>
+  Object.entries((d.state as MafiaState).assign)
+    .filter(([, r]) => r === roleId)
+    .map(([p]) => p);
 const one = (d: Driver, roleId: string) => who(d, roleId)[0]!;
 const S = (d: Driver) => d.state as MafiaState;
 
@@ -19,19 +30,28 @@ function night(d: Driver, choices: Record<string, { ability?: number; target: st
     const c = choices[p];
     if (c) d.act(p, { type: 'night', ability: c.target ? (c.ability ?? 0) : -1, target: c.target });
   }
-  for (const p of [...S(d).alive]) if (S(d).phase === 'night' && !S(d).choices[p]) d.act(p, { type: 'night', ability: -1, target: null });
+  for (const p of [...S(d).alive])
+    if (S(d).phase === 'night' && !S(d).choices[p]) d.act(p, { type: 'night', ability: -1, target: null });
 }
 function voteOut(d: Driver, target: string | null) {
   d.act('p1', { type: 'startVote' });
   const voters = [...S(d).alive];
-  for (const p of voters) if (S(d).phase === 'vote') d.act(p, { type: 'vote', target: target && p !== target ? target : SKIP });
+  for (const p of voters)
+    if (S(d).phase === 'vote') d.act(p, { type: 'vote', target: target && p !== target ? target : SKIP });
 }
 
 describe('roles & composition (§7.3, §7.4)', () => {
   it('built-in roles are valid schema data; night may be one ability or a list', () => {
     expect(R.silencer.night).toHaveLength(2);
     expect(R.citizen.night).toEqual([]);
-    const sniper = abilityRoleSchema.parse({ id: 'sniper', nameFa: 'تک‌تیرانداز', team: 'citizens', night: { action: 'kill', target: 'other', uses: 1, priority: 40, fromNight: 2 }, passive: ['appearsInnocent'], onWrongKill: 'selfDies' });
+    const sniper = abilityRoleSchema.parse({
+      id: 'sniper',
+      nameFa: 'تک‌تیرانداز',
+      team: 'citizens',
+      night: { action: 'kill', target: 'other', uses: 1, priority: 40, fromNight: 2 },
+      passive: ['appearsInnocent'],
+      onWrongKill: 'selfDies',
+    });
     expect(sniper.night[0]).toMatchObject({ action: 'kill', uses: 1, fromNight: 2 });
   });
   it('composition validation: mafia must be less than half', () => {
@@ -39,7 +59,9 @@ describe('roles & composition (§7.3, §7.4)', () => {
     expect(checkComposition(comp(['doctor', 1]), 6)).toBe('mafia.err.noMafia');
     expect(checkComposition(comp(['mafia', 2], ['doctor', 6]), 6)).toBe('mafia.err.tooManyRoles');
     expect(checkComposition(comp(['mafia', 2], ['doctor', 1]), 6)).toBeNull();
-    expect(mafiaAuto.validate!({ ...mafiaAuto.defaultConfig, composition: comp(['mafia', 3]) }, 6)?.k).toBe('mafia.err.mafiaHalf');
+    expect(mafiaAuto.validate!({ ...mafiaAuto.defaultConfig, composition: comp(['mafia', 3]) }, 6)?.k).toBe(
+      'mafia.err.mafiaHalf',
+    );
   });
   it('default compositions are valid for every player count', () => {
     for (let n = 5; n <= 16; n++) expect(checkComposition(defaultComposition('mafia', n), n)).toBeNull();
@@ -52,10 +74,18 @@ describe('roles & composition (§7.3, §7.4)', () => {
 });
 
 describe('mafia.auto (app is the moderator)', () => {
-  const cfg = (c: Composition) => ({ ...mafiaAuto.defaultConfig, composition: c, voteMode: 'secret' as const });
+  const cfg = (c: Composition) => ({
+    ...mafiaAuto.defaultConfig,
+    composition: c,
+    voteMode: 'secret' as const,
+  });
 
   it('deals the composition; mafia know each other, citizens know nobody', () => {
-    const d = new Driver(mafiaAuto, makePlayers(7), cfg(comp(['godfather', 1], ['mafia', 1], ['doctor', 1], ['detective', 1])));
+    const d = new Driver(
+      mafiaAuto,
+      makePlayers(7),
+      cfg(comp(['godfather', 1], ['mafia', 1], ['doctor', 1], ['detective', 1])),
+    );
     expect(who(d, 'citizen')).toHaveLength(3);
     const gf = one(d, 'godfather');
     const m = one(d, 'mafia');
@@ -68,7 +98,11 @@ describe('mafia.auto (app is the moderator)', () => {
   });
 
   it('night: mafia kill, doctor saves (protect 20 before kill 30), detective sees godfather as innocent', () => {
-    const d = new Driver(mafiaAuto, makePlayers(7), cfg(comp(['godfather', 1], ['mafia', 1], ['doctor', 1], ['detective', 1])));
+    const d = new Driver(
+      mafiaAuto,
+      makePlayers(7),
+      cfg(comp(['godfather', 1], ['mafia', 1], ['doctor', 1], ['detective', 1])),
+    );
     ackAll(d);
     expect(S(d).phase).toBe('night');
     expect(d.pending()).toHaveLength(7); // everyone takes the phone at night
@@ -217,8 +251,21 @@ describe('mafia.auto (app is the moderator)', () => {
   });
 
   it('custom data-only role (blocker) works without new code', () => {
-    const blocker = abilityRoleSchema.parse({ id: 'barman', nameFa: 'ساقی', team: 'citizens', night: { action: 'block', target: 'other' }, weight: 2 });
-    const d = new Driver(mafiaAuto, makePlayers(7), cfg([{ role: R.mafia, n: 1 }, { role: blocker, n: 1 }]));
+    const blocker = abilityRoleSchema.parse({
+      id: 'barman',
+      nameFa: 'ساقی',
+      team: 'citizens',
+      night: { action: 'block', target: 'other' },
+      weight: 2,
+    });
+    const d = new Driver(
+      mafiaAuto,
+      makePlayers(7),
+      cfg([
+        { role: R.mafia, n: 1 },
+        { role: blocker, n: 1 },
+      ]),
+    );
     ackAll(d);
     const m = one(d, 'mafia');
     const victim = who(d, 'citizen')[0]!;
@@ -228,8 +275,21 @@ describe('mafia.auto (app is the moderator)', () => {
   });
 
   it('convert recruits a citizen into the mafia', () => {
-    const recruiter = abilityRoleSchema.parse({ id: 'recruiter', nameFa: 'جذب‌کننده', team: 'mafia', night: { action: 'convert', target: 'other', uses: 1 }, knowsTeammates: true });
-    const d = new Driver(mafiaAuto, makePlayers(8), cfg([{ role: R.mafia, n: 1 }, { role: recruiter, n: 1 }]));
+    const recruiter = abilityRoleSchema.parse({
+      id: 'recruiter',
+      nameFa: 'جذب‌کننده',
+      team: 'mafia',
+      night: { action: 'convert', target: 'other', uses: 1 },
+      knowsTeammates: true,
+    });
+    const d = new Driver(
+      mafiaAuto,
+      makePlayers(8),
+      cfg([
+        { role: R.mafia, n: 1 },
+        { role: recruiter, n: 1 },
+      ]),
+    );
     ackAll(d);
     const target = who(d, 'citizen')[0]!;
     night(d, { [one(d, 'recruiter')]: { target } });
@@ -258,7 +318,10 @@ describe('mafia.werewolf', () => {
     expect(d.result()?.title.k).toBe('mafia.result.citizens');
   });
   it('witch heal is used up after one use', () => {
-    const c: Composition = [{ role: W.werewolf, n: 1 }, { role: W.witch, n: 1 }];
+    const c: Composition = [
+      { role: W.werewolf, n: 1 },
+      { role: W.witch, n: 1 },
+    ];
     const d = new Driver(werewolf, makePlayers(8), { ...werewolf.defaultConfig, composition: c });
     ackAll(d);
     const witch = one(d, 'witch');
@@ -285,7 +348,10 @@ describe('mafia.onenight', () => {
     expect((d.view(wolf) as MafiaView).me?.abilities).toEqual([]);
     night(d, { [seer]: { target: wolf }, [swapper]: { target: wolf } });
     // seer acted at priority 50 after the swap (25) → sees the *new* card of the wolf seat (swapper)
-    expect((d.view(seer) as MafiaView).me?.notes.at(-1)).toMatchObject({ k: 'mafia.note.sawRole', p: { role: 'جابه‌جاگر' } });
+    expect((d.view(seer) as MafiaView).me?.notes.at(-1)).toMatchObject({
+      k: 'mafia.note.sawRole',
+      p: { role: 'جابه‌جاگر' },
+    });
     expect(roleOf(S(d), swapper).id).toBe('werewolf');
     expect((d.view(swapper) as MafiaView).me?.notes.at(-1)?.k).toBe('mafia.note.swapped');
     d.act('p1', { type: 'continue' });
@@ -297,7 +363,10 @@ describe('mafia.onenight', () => {
 
 describe('mafia.moderated', () => {
   it('moderator gets no role but sees the full script; players only their own role', () => {
-    const d = new Driver(mafiaModerated, makePlayers(7), { ...mafiaModerated.defaultConfig, composition: comp(['godfather', 1], ['mafia', 1], ['doctor', 1]) });
+    const d = new Driver(mafiaModerated, makePlayers(7), {
+      ...mafiaModerated.defaultConfig,
+      composition: comp(['godfather', 1], ['mafia', 1], ['doctor', 1]),
+    });
     expect(S(d).assign.p1).toBeUndefined(); // host = moderator
     ackAll(d);
     expect(S(d).phase).toBe('moderating');

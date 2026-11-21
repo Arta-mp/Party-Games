@@ -36,17 +36,47 @@
   color-scheme: light;
 }
 
-[data-family='hidden-word'] { --accent: #a98bff; --accent-ink: #160b33; }
-[data-family='social-deduction'] { --accent: #ff6b6b; --accent-ink: #330808; }
-[data-family='word-guess'] { --accent: #ff9f43; --accent-ink: #2e1700; }
-[data-family='team-board'] { --accent: #2ed3b7; --accent-ink: #002b24; }
-[data-family='party'] { --accent: #ff6fb5; --accent-ink: #33001a; }
+[data-family='hidden-word'] {
+  --accent: #a98bff;
+  --accent-ink: #160b33;
+}
+[data-family='social-deduction'] {
+  --accent: #ff6b6b;
+  --accent-ink: #330808;
+}
+[data-family='word-guess'] {
+  --accent: #ff9f43;
+  --accent-ink: #2e1700;
+}
+[data-family='team-board'] {
+  --accent: #2ed3b7;
+  --accent-ink: #002b24;
+}
+[data-family='party'] {
+  --accent: #ff6fb5;
+  --accent-ink: #33001a;
+}
 
-:root[data-theme='light'] [data-family='hidden-word'] { --accent: #7c5cff; --accent-ink: #fff; }
-:root[data-theme='light'] [data-family='social-deduction'] { --accent: #e5484d; --accent-ink: #fff; }
-:root[data-theme='light'] [data-family='word-guess'] { --accent: #f07a00; --accent-ink: #fff; }
-:root[data-theme='light'] [data-family='team-board'] { --accent: #0f9f8a; --accent-ink: #fff; }
-:root[data-theme='light'] [data-family='party'] { --accent: #e0408f; --accent-ink: #fff; }
+:root[data-theme='light'] [data-family='hidden-word'] {
+  --accent: #7c5cff;
+  --accent-ink: #fff;
+}
+:root[data-theme='light'] [data-family='social-deduction'] {
+  --accent: #e5484d;
+  --accent-ink: #fff;
+}
+:root[data-theme='light'] [data-family='word-guess'] {
+  --accent: #f07a00;
+  --accent-ink: #fff;
+}
+:root[data-theme='light'] [data-family='team-board'] {
+  --accent: #0f9f8a;
+  --accent-ink: #fff;
+}
+:root[data-theme='light'] [data-family='party'] {
+  --accent: #e0408f;
+  --accent-ink: #fff;
+}
 
 @theme inline {
   --color-bg: var(--bg);
@@ -107,18 +137,34 @@ button,
 }
 
 @keyframes pg-pop {
-  from { transform: scale(0.9); opacity: 0; }
-  to { transform: scale(1); opacity: 1; }
+  from {
+    transform: scale(0.9);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
 }
-.animate-pop { animation: pg-pop 220ms ease-out both; }
+.animate-pop {
+  animation: pg-pop 220ms ease-out both;
+}
 
 @keyframes pg-fall {
-  0% { transform: translate3d(0, -10vh, 0) rotate(0deg); opacity: 1; }
-  100% { transform: translate3d(var(--dx, 0), 105vh, 0) rotate(720deg); opacity: 0.9; }
+  0% {
+    transform: translate3d(0, -10vh, 0) rotate(0deg);
+    opacity: 1;
+  }
+  100% {
+    transform: translate3d(var(--dx, 0), 105vh, 0) rotate(720deg);
+    opacity: 0.9;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after {
+  *,
+  *::before,
+  *::after {
     animation-duration: 1ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 1ms !important;

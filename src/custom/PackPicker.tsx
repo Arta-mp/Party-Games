@@ -7,7 +7,15 @@ import { useCustom } from './store';
 
 /** Choose which built-in and custom packs feed the game. Custom packs are embedded in the config,
  *  so other players never need to install them (§7.4). */
-export function PackPicker({ kind, value, onChange }: { kind: PackKind; value: PackSelection; onChange: (v: PackSelection) => void }) {
+export function PackPicker({
+  kind,
+  value,
+  onChange,
+}: {
+  kind: PackKind;
+  value: PackSelection;
+  onChange: (v: PackSelection) => void;
+}) {
   const t = useT();
   const num = useNum();
   const builtin = builtinPacks(kind);
@@ -29,20 +37,36 @@ export function PackPicker({ kind, value, onChange }: { kind: PackKind; value: P
       custom: on ? value.custom.filter((p) => p.id !== id) : [...value.custom, pack],
     });
   };
-  const chip = (on: boolean) => cn('h-10 rounded-full border px-3 text-sm font-bold', on ? 'border-accent bg-accent/20' : 'border-border text-muted');
+  const chip = (on: boolean) =>
+    cn(
+      'h-10 rounded-full border px-3 text-sm font-bold',
+      on ? 'border-accent bg-accent/20' : 'border-border text-muted',
+    );
   return (
     <div className="flex flex-col gap-1.5">
-      <span className="text-sm font-bold text-muted">{t('packs.title')}</span>
+      <span className="text-muted text-sm font-bold">{t('packs.title')}</span>
       <div className="flex flex-wrap gap-2">
         {builtin.map((p) => (
-          <button key={p.id} type="button" aria-pressed={builtinOn(p.id)} className={chip(builtinOn(p.id))} onClick={() => toggleBuiltin(p.id)}>
+          <button
+            key={p.id}
+            type="button"
+            aria-pressed={builtinOn(p.id)}
+            className={chip(builtinOn(p.id))}
+            onClick={() => toggleBuiltin(p.id)}
+          >
             {p.nameFa} · {num(p.items.length)}
           </button>
         ))}
         {custom.map((p) => {
           const on = value.custom.some((c) => c.id === p.id);
           return (
-            <button key={p.id} type="button" aria-pressed={on} className={chip(on)} onClick={() => toggleCustom(p.id)}>
+            <button
+              key={p.id}
+              type="button"
+              aria-pressed={on}
+              className={chip(on)}
+              onClick={() => toggleCustom(p.id)}
+            >
               ✏️ {p.nameFa} · {num(p.items.length)}
             </button>
           );

@@ -11,9 +11,23 @@ export function MostLikelySetup({ config, onChange }: SetupProps<MLConfig>) {
   const t = useT();
   return (
     <div className="flex flex-col gap-3">
-      <Stepper label={t('ml.cfg.rounds')} value={config.rounds} min={1} max={30} onChange={(rounds) => onChange({ ...config, rounds })} />
-      <Toggle label={t('ml.cfg.self')} checked={config.allowSelf} onChange={(allowSelf) => onChange({ ...config, allowSelf })} />
-      <PackPicker kind="questions" value={config.packs} onChange={(packs) => onChange({ ...config, packs })} />
+      <Stepper
+        label={t('ml.cfg.rounds')}
+        value={config.rounds}
+        min={1}
+        max={30}
+        onChange={(rounds) => onChange({ ...config, rounds })}
+      />
+      <Toggle
+        label={t('ml.cfg.self')}
+        checked={config.allowSelf}
+        onChange={(allowSelf) => onChange({ ...config, allowSelf })}
+      />
+      <PackPicker
+        kind="questions"
+        value={config.packs}
+        onChange={(packs) => onChange({ ...config, packs })}
+      />
     </div>
   );
 }
@@ -22,9 +36,9 @@ export function MostLikelyPlay({ view, dispatch, me, isHost }: PlayProps<MLView,
   const t = useT();
   const [pick, setPick] = useState<string | null>(null);
   const q = (
-    <Card className="flex flex-col gap-2 border-accent/40 py-6 text-center">
+    <Card className="border-accent/40 flex flex-col gap-2 py-6 text-center">
       <Badge className="mx-auto">{t('ml.q', { n: view.index + 1, total: view.total })}</Badge>
-      <p className="text-2xl font-black leading-10" data-testid="question">
+      <p className="text-2xl leading-10 font-black" data-testid="question">
         {view.question}
       </p>
     </Card>
@@ -36,8 +50,17 @@ export function MostLikelyPlay({ view, dispatch, me, isHost }: PlayProps<MLView,
         {q}
         {canVote ? (
           <>
-            <PlayerPicker players={view.allowSelf ? view.players : view.players.filter((p) => p.id !== me)} value={pick} onChange={setPick} />
-            <Button size="lg" disabled={!pick} onClick={() => pick && (dispatch({ type: 'vote', target: pick }), play('tap'))} data-testid="confirm-vote">
+            <PlayerPicker
+              players={view.allowSelf ? view.players : view.players.filter((p) => p.id !== me)}
+              value={pick}
+              onChange={setPick}
+            />
+            <Button
+              size="lg"
+              disabled={!pick}
+              onClick={() => pick && (dispatch({ type: 'vote', target: pick }), play('tap'))}
+              data-testid="confirm-vote"
+            >
               {t('hw.castVote')}
             </Button>
           </>

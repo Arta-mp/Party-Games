@@ -28,7 +28,10 @@ const parsed = z
   .catch({ packs: [], infoRoles: [], abilityRoles: [] })
   .parse(stored);
 
-const upsert = <T extends { id: string }>(list: T[], item: T) => [...list.filter((x) => x.id !== item.id), item];
+const upsert = <T extends { id: string }>(list: T[], item: T) => [
+  ...list.filter((x) => x.id !== item.id),
+  item,
+];
 
 export const useCustom = create<CustomState>((set, get) => {
   const persist = () => {

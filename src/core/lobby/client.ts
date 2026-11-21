@@ -1,4 +1,10 @@
-import { hostMsgSchema, type ClientMsg, type Envelope, type Hello, type LobbyAction } from '@/core/net/protocol';
+import {
+  hostMsgSchema,
+  type ClientMsg,
+  type Envelope,
+  type Hello,
+  type LobbyAction,
+} from '@/core/net/protocol';
 import { HOST_PEER, type Transport, type Unsubscribe } from '@/core/net/transport';
 import { electHost, type LobbyState } from './lobby';
 import type { HostSnapshot } from './host';
@@ -110,7 +116,8 @@ export class ClientSession {
         this.set({ view: msg.view, gameId: msg.gameId, rev: msg.rev, offset });
         break;
       case 'error':
-        if (msg.code === 'kicked' || msg.code === 'locked' || msg.code === 'in-game' || msg.code === 'full') this.set({ status: msg.code });
+        if (msg.code === 'kicked' || msg.code === 'locked' || msg.code === 'in-game' || msg.code === 'full')
+          this.set({ status: msg.code });
         else this.set({ lastError: msg.code });
         break;
       case 'snapshot':

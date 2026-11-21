@@ -22,15 +22,19 @@ describe('i18n', () => {
     const missing = new Set<string>();
     for (const f of files(join(__dirname, '..'))) {
       const src = readFileSync(f, 'utf8');
-      for (const m of src.matchAll(/\bt\('([a-zA-Z0-9_.-]+)'/g)) if (!has(m[1]!)) missing.add(`${m[1]} (${f.split('src/')[1]})`);
-      for (const m of src.matchAll(/\bk: '([a-zA-Z0-9_-]+\.[a-zA-Z0-9_.-]+)'/g)) if (!has(m[1]!) && !/^tut\.\d$/.test(m[1]!)) missing.add(`${m[1]} (${f.split('src/')[1]})`);
+      for (const m of src.matchAll(/\bt\('([a-zA-Z0-9_.-]+)'/g))
+        if (!has(m[1]!)) missing.add(`${m[1]} (${f.split('src/')[1]})`);
+      for (const m of src.matchAll(/\bk: '([a-zA-Z0-9_-]+\.[a-zA-Z0-9_.-]+)'/g))
+        if (!has(m[1]!) && !/^tut\.\d$/.test(m[1]!)) missing.add(`${m[1]} (${f.split('src/')[1]})`);
       for (const m of src.matchAll(/reason = '([a-zA-Z0-9_.-]+)'/g)) if (!has(m[1]!)) missing.add(m[1]!);
     }
     expect([...missing]).toEqual([]);
   });
 
   it('every game has name, description and a 3-step how-to', () => {
-    for (const id of Object.keys(META)) for (const s of ['name', 'desc', 'how1', 'how2', 'how3']) expect(has(`game.${id}.${s}`), `game.${id}.${s}`).toBe(true);
+    for (const id of Object.keys(META))
+      for (const s of ['name', 'desc', 'how1', 'how2', 'how3'])
+        expect(has(`game.${id}.${s}`), `game.${id}.${s}`).toBe(true);
     for (const f of FAMILIES) {
       expect(has(`family.${f.id}`)).toBe(true);
       expect(has(`family.${f.id}.desc`)).toBe(true);

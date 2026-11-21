@@ -47,31 +47,56 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
   { className, variant, size, block, type = 'button', ...props },
   ref,
 ) {
-  return <button ref={ref} type={type} className={cn(buttonVariants({ variant, size, block }), className)} {...props} />;
+  return (
+    <button
+      ref={ref}
+      type={type}
+      className={cn(buttonVariants({ variant, size, block }), className)}
+      {...props}
+    />
+  );
 });
 
 // ------------------------------------------------------------------ Card
 export function Card({ className, ...props }: HTMLAttributes<HTMLDivElement>) {
-  return <div className={cn('rounded-[var(--radius-card)] border border-border bg-surface p-4', className)} {...props} />;
-}
-
-export function Badge({ className, ...props }: HTMLAttributes<HTMLSpanElement>) {
   return (
-    <span
-      className={cn('inline-flex items-center gap-1 rounded-full bg-surface-2 px-2.5 py-0.5 text-xs font-semibold text-muted', className)}
+    <div
+      className={cn('border-border bg-surface rounded-[var(--radius-card)] border p-4', className)}
       {...props}
     />
   );
 }
 
-export function Notice({ tone = 'info', children }: { tone?: 'info' | 'warn' | 'danger' | 'success'; children: ReactNode }) {
+export function Badge({ className, ...props }: HTMLAttributes<HTMLSpanElement>) {
+  return (
+    <span
+      className={cn(
+        'bg-surface-2 text-muted inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold',
+        className,
+      )}
+      {...props}
+    />
+  );
+}
+
+export function Notice({
+  tone = 'info',
+  children,
+}: {
+  tone?: 'info' | 'warn' | 'danger' | 'success';
+  children: ReactNode;
+}) {
   const tones = {
     info: 'border-accent/40 bg-accent/10',
     warn: 'border-brand/50 bg-brand/10',
     danger: 'border-danger/50 bg-danger/10',
     success: 'border-success/50 bg-success/10',
   };
-  return <div className={cn('rounded-2xl border px-4 py-3 text-sm leading-7', tones[tone])} role="status">{children}</div>;
+  return (
+    <div className={cn('rounded-2xl border px-4 py-3 text-sm leading-7', tones[tone])} role="status">
+      {children}
+    </div>
+  );
 }
 
 // ------------------------------------------------------------------ Avatar / PlayerChip
@@ -79,7 +104,10 @@ export function Avatar({ name, size = 40, className }: { name: string; size?: nu
   return (
     <span
       aria-hidden
-      className={cn('inline-grid shrink-0 place-items-center rounded-full font-black text-black/80', className)}
+      className={cn(
+        'inline-grid shrink-0 place-items-center rounded-full font-black text-black/80',
+        className,
+      )}
       style={{ width: size, height: size, background: avatarColor(name), fontSize: size * 0.42 }}
     >
       {initials(name)}
@@ -114,9 +142,9 @@ export function PlayerChip({
       data-testid={testId}
       aria-pressed={onClick ? selected : undefined}
       className={cn(
-        'flex min-h-14 w-full items-center gap-3 rounded-2xl border border-border bg-surface px-3 py-2 text-start transition',
+        'border-border bg-surface flex min-h-14 w-full items-center gap-3 rounded-2xl border px-3 py-2 text-start transition',
         muted && 'opacity-45',
-        selected && 'border-accent bg-accent/15 ring-2 ring-accent',
+        selected && 'border-accent bg-accent/15 ring-accent ring-2',
         onClick && 'active:scale-[.98]',
         className,
       )}
@@ -151,7 +179,7 @@ export function Screen({
   return (
     <div data-family={family} className="mx-auto flex min-h-dvh w-full max-w-lg flex-col">
       {(title || onBack || headerEnd) && (
-        <header className="sticky top-0 z-20 flex h-16 items-center gap-2 bg-bg/85 px-4 backdrop-blur">
+        <header className="bg-bg/85 sticky top-0 z-20 flex h-16 items-center gap-2 px-4 backdrop-blur">
           {onBack && (
             <Button variant="ghost" size="icon" onClick={onBack} aria-label={t('common.back')}>
               <span className="rtl:rotate-180">←</span>
@@ -163,7 +191,7 @@ export function Screen({
       )}
       <main className={cn('flex flex-1 flex-col gap-4 px-4 pb-6', className)}>{children}</main>
       {footer && (
-        <footer className="safe-bottom sticky bottom-0 z-20 flex flex-col gap-2 border-t border-border bg-bg/90 px-4 pt-3 backdrop-blur">
+        <footer className="safe-bottom border-border bg-bg/90 sticky bottom-0 z-20 flex flex-col gap-2 border-t px-4 pt-3 backdrop-blur">
           {footer}
         </footer>
       )}
@@ -172,11 +200,21 @@ export function Screen({
 }
 
 export function SectionTitle({ children, className }: { children: ReactNode; className?: string }) {
-  return <h2 className={cn('mt-2 text-sm font-bold text-muted', className)}>{children}</h2>;
+  return <h2 className={cn('text-muted mt-2 text-sm font-bold', className)}>{children}</h2>;
 }
 
 // ------------------------------------------------------------------ Sheet (bottom sheet dialog)
-export function Sheet({ open, onClose, title, children }: { open: boolean; onClose: () => void; title?: ReactNode; children: ReactNode }) {
+export function Sheet({
+  open,
+  onClose,
+  title,
+  children,
+}: {
+  open: boolean;
+  onClose: () => void;
+  title?: ReactNode;
+  children: ReactNode;
+}) {
   const id = useId();
   useEffect(() => {
     if (!open) return;
@@ -187,7 +225,12 @@ export function Sheet({ open, onClose, title, children }: { open: boolean; onClo
   return (
     <AnimatePresence>
       {open && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center" role="dialog" aria-modal aria-labelledby={id}>
+        <div
+          className="fixed inset-0 z-50 flex items-end justify-center"
+          role="dialog"
+          aria-modal
+          aria-labelledby={id}
+        >
           <m.button
             type="button"
             aria-label="close"
@@ -199,13 +242,13 @@ export function Sheet({ open, onClose, title, children }: { open: boolean; onClo
             onClick={onClose}
           />
           <m.div
-            className="safe-bottom relative max-h-[88dvh] w-full max-w-lg overflow-y-auto rounded-t-3xl border border-border bg-surface px-4 pt-3"
+            className="safe-bottom border-border bg-surface relative max-h-[88dvh] w-full max-w-lg overflow-y-auto rounded-t-3xl border px-4 pt-3"
             initial={{ y: '100%' }}
             animate={{ y: 0 }}
             exit={{ y: '100%' }}
             transition={{ duration: 0.25, ease: 'easeOut' }}
           >
-            <div className="mx-auto mb-3 h-1.5 w-12 rounded-full bg-border" />
+            <div className="bg-border mx-auto mb-3 h-1.5 w-12 rounded-full" />
             {title && (
               <h2 id={id} className="mb-3 text-lg font-black">
                 {title}
@@ -220,27 +263,28 @@ export function Sheet({ open, onClose, title, children }: { open: boolean; onClo
 }
 
 // ------------------------------------------------------------------ form controls
-export const TextField = forwardRef<HTMLInputElement, InputHTMLAttributes<HTMLInputElement> & { label?: string; hint?: string }>(
-  function TextField({ label, hint, className, id, ...props }, ref) {
-    const auto = useId();
-    const fid = id ?? auto;
-    return (
-      <label htmlFor={fid} className="flex flex-col gap-1.5">
-        {label && <span className="text-sm font-bold text-muted">{label}</span>}
-        <input
-          ref={ref}
-          id={fid}
-          className={cn(
-            'h-14 rounded-2xl border border-border bg-surface-2 px-4 text-lg font-semibold outline-none placeholder:text-muted/60 focus:border-accent',
-            className,
-          )}
-          {...props}
-        />
-        {hint && <span className="text-xs text-muted">{hint}</span>}
-      </label>
-    );
-  },
-);
+export const TextField = forwardRef<
+  HTMLInputElement,
+  InputHTMLAttributes<HTMLInputElement> & { label?: string; hint?: string }
+>(function TextField({ label, hint, className, id, ...props }, ref) {
+  const auto = useId();
+  const fid = id ?? auto;
+  return (
+    <label htmlFor={fid} className="flex flex-col gap-1.5">
+      {label && <span className="text-muted text-sm font-bold">{label}</span>}
+      <input
+        ref={ref}
+        id={fid}
+        className={cn(
+          'border-border bg-surface-2 placeholder:text-muted/60 focus:border-accent h-14 rounded-2xl border px-4 text-lg font-semibold outline-none',
+          className,
+        )}
+        {...props}
+      />
+      {hint && <span className="text-muted text-xs">{hint}</span>}
+    </label>
+  );
+});
 
 export function Stepper({
   label,
@@ -261,16 +305,28 @@ export function Stepper({
 }) {
   const num = useNum();
   return (
-    <div className="flex items-center justify-between gap-3 rounded-2xl bg-surface-2 p-2 ps-4">
+    <div className="bg-surface-2 flex items-center justify-between gap-3 rounded-2xl p-2 ps-4">
       <span className="font-semibold">{label}</span>
       <div className="flex items-center gap-1">
-        <Button variant="ghost" size="icon" aria-label={`${label} −`} disabled={value <= min} onClick={() => onChange(Math.max(min, value - step))}>
+        <Button
+          variant="ghost"
+          size="icon"
+          aria-label={`${label} −`}
+          disabled={value <= min}
+          onClick={() => onChange(Math.max(min, value - step))}
+        >
           −
         </Button>
         <output className="min-w-16 text-center text-lg font-black" aria-live="polite">
           {format ? format(value) : num(value)}
         </output>
-        <Button variant="ghost" size="icon" aria-label={`${label} +`} disabled={value >= max} onClick={() => onChange(Math.min(max, value + step))}>
+        <Button
+          variant="ghost"
+          size="icon"
+          aria-label={`${label} +`}
+          disabled={value >= max}
+          onClick={() => onChange(Math.min(max, value + step))}
+        >
           +
         </Button>
       </div>
@@ -278,21 +334,41 @@ export function Stepper({
   );
 }
 
-export function Toggle({ label, checked, onChange, hint }: { label: string; checked: boolean; onChange: (v: boolean) => void; hint?: string }) {
+export function Toggle({
+  label,
+  checked,
+  onChange,
+  hint,
+}: {
+  label: string;
+  checked: boolean;
+  onChange: (v: boolean) => void;
+  hint?: string;
+}) {
   return (
     <button
       type="button"
       role="switch"
       aria-checked={checked}
       onClick={() => onChange(!checked)}
-      className="flex min-h-14 w-full items-center justify-between gap-3 rounded-2xl bg-surface-2 px-4 py-2 text-start"
+      className="bg-surface-2 flex min-h-14 w-full items-center justify-between gap-3 rounded-2xl px-4 py-2 text-start"
     >
       <span className="flex flex-col">
         <span className="font-semibold">{label}</span>
-        {hint && <span className="text-xs text-muted">{hint}</span>}
+        {hint && <span className="text-muted text-xs">{hint}</span>}
       </span>
-      <span className={cn('relative h-7 w-12 shrink-0 rounded-full transition', checked ? 'bg-accent' : 'bg-border')}>
-        <span className={cn('absolute top-1 size-5 rounded-full bg-white transition-all', checked ? 'start-6' : 'start-1')} />
+      <span
+        className={cn(
+          'relative h-7 w-12 shrink-0 rounded-full transition',
+          checked ? 'bg-accent' : 'bg-border',
+        )}
+      >
+        <span
+          className={cn(
+            'absolute top-1 size-5 rounded-full bg-white transition-all',
+            checked ? 'start-6' : 'start-1',
+          )}
+        />
       </span>
     </button>
   );
@@ -311,8 +387,8 @@ export function Segmented<V extends string>({
 }) {
   return (
     <div className="flex flex-col gap-1.5">
-      {label && <span className="text-sm font-bold text-muted">{label}</span>}
-      <div className="flex gap-1 rounded-2xl bg-surface-2 p-1" role="radiogroup" aria-label={label}>
+      {label && <span className="text-muted text-sm font-bold">{label}</span>}
+      <div className="bg-surface-2 flex gap-1 rounded-2xl p-1" role="radiogroup" aria-label={label}>
         {options.map((o) => (
           <button
             key={o.value}
@@ -374,7 +450,12 @@ export function Timer({
   const mm = Math.floor(sec / 60);
   const ss = sec % 60;
   return (
-    <div className="relative mx-auto grid place-items-center" style={{ width: size, height: size }} role="timer" aria-live="off">
+    <div
+      className="relative mx-auto grid place-items-center"
+      style={{ width: size, height: size }}
+      role="timer"
+      aria-live="off"
+    >
       <svg width={size} height={size} className="-rotate-90">
         <circle cx={size / 2} cy={size / 2} r={r} stroke="var(--border)" strokeWidth={10} fill="none" />
         <circle
@@ -449,15 +530,15 @@ export function HoldReveal({
         animate={{ rotateY: open ? 180 : 0 }}
         transition={{ duration: 0.25 }}
       >
-        <span className="absolute inset-0 flex flex-col items-center justify-center gap-3 rounded-[var(--radius-card)] border-2 border-dashed border-accent/60 bg-surface [backface-visibility:hidden]">
+        <span className="border-accent/60 bg-surface absolute inset-0 flex flex-col items-center justify-center gap-3 rounded-[var(--radius-card)] border-2 border-dashed [backface-visibility:hidden]">
           {!compact && <span className="text-6xl">👆</span>}
           <span className={compact ? 'text-sm font-black' : 'text-lg font-black'}>
             {compact && '👆 '}
             {label ?? t('common.holdToSee')}
           </span>
-          {!compact && <span className="text-sm text-muted">{t('common.releaseToHide')}</span>}
+          {!compact && <span className="text-muted text-sm">{t('common.releaseToHide')}</span>}
         </span>
-        <span className="absolute inset-0 flex flex-col items-center justify-center gap-2 overflow-hidden rounded-[var(--radius-card)] border-2 border-accent bg-surface-2 p-4 [backface-visibility:hidden] [transform:rotateY(180deg)]">
+        <span className="border-accent bg-surface-2 absolute inset-0 flex [transform:rotateY(180deg)] flex-col items-center justify-center gap-2 overflow-hidden rounded-[var(--radius-card)] border-2 p-4 [backface-visibility:hidden]">
           {open && children}
         </span>
       </m.button>
@@ -469,13 +550,13 @@ export function HoldReveal({
 export function Handoff({ name, onReady, reason }: { name: string; onReady: () => void; reason?: string }) {
   const t = useT();
   return (
-    <div className="flex flex-1 flex-col items-center justify-center gap-6 py-10 text-center animate-pop">
-      <span className="text-sm font-bold text-muted">{t('pp.giveTo')}</span>
+    <div className="animate-pop flex flex-1 flex-col items-center justify-center gap-6 py-10 text-center">
+      <span className="text-muted text-sm font-bold">{t('pp.giveTo')}</span>
       <Avatar name={name} size={112} />
       <h2 className="text-4xl font-black" data-testid="handoff-name">
         {name}
       </h2>
-      {reason && <p className="max-w-xs text-muted">{reason}</p>}
+      {reason && <p className="text-muted max-w-xs">{reason}</p>}
       <Button size="xl" block onClick={onReady} data-testid="handoff-ready">
         {t('pp.iAm', { name })}
       </Button>
@@ -545,9 +626,13 @@ export function Confetti({ active }: { active: boolean }) {
 }
 
 export function BigWord({ children, className }: { children: ReactNode; className?: string }) {
-  return <div className={cn('text-center text-4xl font-black leading-tight break-words', className)}>{children}</div>;
+  return (
+    <div className={cn('text-center text-4xl leading-tight font-black break-words', className)}>
+      {children}
+    </div>
+  );
 }
 
 export function Empty({ children }: { children: ReactNode }) {
-  return <p className="py-8 text-center text-muted">{children}</p>;
+  return <p className="text-muted py-8 text-center">{children}</p>;
 }

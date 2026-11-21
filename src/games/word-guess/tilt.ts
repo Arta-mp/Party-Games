@@ -23,7 +23,9 @@ export function useTilt(active: boolean, onDown: () => void, onUp: () => void) {
     base.current = null;
     const handler = (e: DeviceOrientationEvent) => {
       // in landscape the forehead tilt shows up on gamma; fall back to beta in portrait
-      const landscape = screen.orientation?.type ? screen.orientation.type.startsWith('landscape') : window.innerWidth > window.innerHeight;
+      const landscape = screen.orientation?.type
+        ? screen.orientation.type.startsWith('landscape')
+        : window.innerWidth > window.innerHeight;
       const v = landscape ? e.gamma : e.beta;
       if (v == null) return;
       if (base.current == null) {
@@ -43,7 +45,9 @@ export function useTilt(active: boolean, onDown: () => void, onUp: () => void) {
   }, [active, perm]);
 
   const request = async () => {
-    const DOE = window.DeviceOrientationEvent as unknown as { requestPermission?: () => Promise<'granted' | 'denied'> };
+    const DOE = window.DeviceOrientationEvent as unknown as {
+      requestPermission?: () => Promise<'granted' | 'denied'>;
+    };
     if (typeof DOE?.requestPermission === 'function') {
       try {
         setPerm(await DOE.requestPermission());
@@ -52,6 +56,10 @@ export function useTilt(active: boolean, onDown: () => void, onUp: () => void) {
       }
     } else setPerm('granted');
   };
-  const needsButton = typeof window !== 'undefined' && typeof (window.DeviceOrientationEvent as unknown as { requestPermission?: unknown })?.requestPermission === 'function' && perm !== 'granted';
+  const needsButton =
+    typeof window !== 'undefined' &&
+    typeof (window.DeviceOrientationEvent as unknown as { requestPermission?: unknown })
+      ?.requestPermission === 'function' &&
+    perm !== 'granted';
   return { perm, request, needsButton };
 }

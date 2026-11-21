@@ -11,8 +11,19 @@ export function TruthDareSetup({ config, onChange }: SetupProps<TDConfig>) {
   const t = useT();
   return (
     <div className="flex flex-col gap-3">
-      <Segmented label={t('td.cfg.level')} value={config.level} onChange={(level) => onChange({ ...config, level })} options={LEVELS.map((l) => ({ value: l, label: t(`td.level.${l}`) }))} />
-      <Stepper label={t('td.cfg.turns')} value={config.turns} min={2} max={60} onChange={(turns) => onChange({ ...config, turns })} />
+      <Segmented
+        label={t('td.cfg.level')}
+        value={config.level}
+        onChange={(level) => onChange({ ...config, level })}
+        options={LEVELS.map((l) => ({ value: l, label: t(`td.level.${l}`) }))}
+      />
+      <Stepper
+        label={t('td.cfg.turns')}
+        value={config.turns}
+        min={2}
+        max={60}
+        onChange={(turns) => onChange({ ...config, turns })}
+      />
     </div>
   );
 }
@@ -45,13 +56,19 @@ function Spinner({ view }: { view: TDView }) {
   const p = view.players.find((x) => x.id === shown);
   return (
     <Card className="flex flex-col items-center gap-3 py-6" data-testid="spinner">
-      <m.div animate={{ rotate: spinning ? 360 : 0 }} transition={{ duration: 0.3, repeat: spinning ? Infinity : 0, ease: 'linear' }} className="text-5xl">
+      <m.div
+        animate={{ rotate: spinning ? 360 : 0 }}
+        transition={{ duration: 0.3, repeat: spinning ? Infinity : 0, ease: 'linear' }}
+        className="text-5xl"
+      >
         🎡
       </m.div>
       {p ? (
         <div className="flex flex-col items-center gap-2">
           <Avatar name={p.name} size={72} />
-          <b className="text-2xl" data-testid="chosen">{spinning ? p.name : p.name}</b>
+          <b className="text-2xl" data-testid="chosen">
+            {spinning ? p.name : p.name}
+          </b>
         </div>
       ) : null}
     </Card>
@@ -75,12 +92,17 @@ export function TruthDarePlay({ view, dispatch, me, isHost }: PlayProps<TDView, 
             🎡 {t('td.spin')}
           </Button>
         ) : (
-          <p className="text-center text-muted">{t('td.waitSpin')}</p>
+          <p className="text-muted text-center">{t('td.waitSpin')}</p>
         ))}
       {view.phase === 'choose' &&
         (mine ? (
           <div className="grid grid-cols-2 gap-2">
-            <Button size="xl" variant="secondary" onClick={() => dispatch({ type: 'choose', kind: 'truth' })} data-testid="truth">
+            <Button
+              size="xl"
+              variant="secondary"
+              onClick={() => dispatch({ type: 'choose', kind: 'truth' })}
+              data-testid="truth"
+            >
               💬 {t('td.truth')}
             </Button>
             <Button size="xl" onClick={() => dispatch({ type: 'choose', kind: 'dare' })} data-testid="dare">
@@ -88,22 +110,34 @@ export function TruthDarePlay({ view, dispatch, me, isHost }: PlayProps<TDView, 
             </Button>
           </div>
         ) : (
-          <p className="text-center text-muted">{t('td.choosing', { name })}</p>
+          <p className="text-muted text-center">{t('td.choosing', { name })}</p>
         ))}
       {view.phase === 'task' && (
         <>
           <Card className="border-accent/50 py-6 text-center">
-            <Badge className="mb-2">{view.kind === 'dare' ? `🔥 ${t('td.dare')}` : `💬 ${t('td.truth')}`}</Badge>
-            <p className="text-xl font-black leading-9" data-testid="prompt">
+            <Badge className="mb-2">
+              {view.kind === 'dare' ? `🔥 ${t('td.dare')}` : `💬 ${t('td.truth')}`}
+            </Badge>
+            <p className="text-xl leading-9 font-black" data-testid="prompt">
               {view.prompt}
             </p>
           </Card>
           {(isHost || mine) && (
             <div className="grid grid-cols-2 gap-2">
-              <Button size="lg" variant="success" onClick={() => (dispatch({ type: 'done', ok: true }), play('correct'))} data-testid="td-done">
+              <Button
+                size="lg"
+                variant="success"
+                onClick={() => (dispatch({ type: 'done', ok: true }), play('correct'))}
+                data-testid="td-done"
+              >
                 ✅ {t('td.did')}
               </Button>
-              <Button size="lg" variant="secondary" onClick={() => dispatch({ type: 'done', ok: false })} data-testid="td-skip">
+              <Button
+                size="lg"
+                variant="secondary"
+                onClick={() => dispatch({ type: 'done', ok: false })}
+                data-testid="td-skip"
+              >
                 {t('td.skip')}
               </Button>
             </div>

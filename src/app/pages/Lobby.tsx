@@ -56,7 +56,13 @@ export function LobbyPage() {
     nav('/');
   };
 
-  if (state && (state.status === 'kicked' || state.status === 'locked' || state.status === 'in-game' || state.status === 'full')) {
+  if (
+    state &&
+    (state.status === 'kicked' ||
+      state.status === 'locked' ||
+      state.status === 'in-game' ||
+      state.status === 'full')
+  ) {
     return (
       <Screen title={t('app.name')}>
         <div className="flex flex-1 flex-col items-center justify-center gap-4 text-center">
@@ -77,7 +83,7 @@ export function LobbyPage() {
     return (
       <Screen title={t('lobby.connecting')} onBack={leave}>
         <div className="flex flex-1 flex-col items-center justify-center gap-4 text-center">
-          <div className="size-12 animate-spin rounded-full border-4 border-border border-t-accent" />
+          <div className="border-border border-t-accent size-12 animate-spin rounded-full border-4" />
           <p className="ltr text-4xl font-black tracking-[0.3em]">{code}</p>
           <p className="text-muted">{t('lobby.connectingHint', { via: store.transportKind ?? '' })}</p>
           {slow && <Notice tone="info">{t('lobby.connectTroubleshoot')}</Notice>}
@@ -99,7 +105,9 @@ export function LobbyPage() {
   const hostLost =
     state.status === 'host-lost' ? (
       <Notice tone="warn">
-        {t('lobby.hostLost', { s: Math.max(0, Math.ceil((HOST_GRACE_MS - (Date.now() - (state.hostLostAt ?? Date.now()))) / 1000)) })}
+        {t('lobby.hostLost', {
+          s: Math.max(0, Math.ceil((HOST_GRACE_MS - (Date.now() - (state.hostLostAt ?? Date.now()))) / 1000)),
+        })}
       </Notice>
     ) : null;
 
@@ -120,7 +128,12 @@ export function LobbyPage() {
               <Button size="lg" onClick={() => store.lobbyAction({ type: 'next' })} data-testid="next-round">
                 🔁 {t('results.next')}
               </Button>
-              <Button variant="secondary" size="lg" onClick={() => store.lobbyAction({ type: 'toLobby' })} data-testid="to-lobby">
+              <Button
+                variant="secondary"
+                size="lg"
+                onClick={() => store.lobbyAction({ type: 'toLobby' })}
+                data-testid="to-lobby"
+              >
                 {t('results.toLobby')}
               </Button>
             </div>
@@ -147,7 +160,11 @@ export function LobbyPage() {
           <Notice>{t('common.loading')}</Notice>
         )}
         {isHost && !lobby.result && (
-          <Button variant="ghost" onClick={() => store.lobbyAction({ type: 'toLobby' })} className="mt-4 text-danger">
+          <Button
+            variant="ghost"
+            onClick={() => store.lobbyAction({ type: 'toLobby' })}
+            className="text-danger mt-4"
+          >
             ⏹ {t('lobby.stopGame')}
           </Button>
         )}
@@ -160,7 +177,12 @@ export function LobbyPage() {
   const share = async () => {
     const url = inviteLink(lobby.code);
     try {
-      if (navigator.share) await navigator.share({ title: t('app.name'), text: t('lobby.shareText', { code: lobby.code }), url });
+      if (navigator.share)
+        await navigator.share({
+          title: t('app.name'),
+          text: t('lobby.shareText', { code: lobby.code }),
+          url,
+        });
       else {
         await navigator.clipboard.writeText(url);
         setCopied(true);
@@ -186,7 +208,11 @@ export function LobbyPage() {
             onClick={() => store.lobbyAction({ type: 'start' })}
             data-testid="start-game"
           >
-            {startState === 'no-game' ? t('lobby.pickFirst') : startState === 'not-ready' ? t('lobby.waitReady') : `▶ ${t('lobby.start')}`}
+            {startState === 'no-game'
+              ? t('lobby.pickFirst')
+              : startState === 'not-ready'
+                ? t('lobby.waitReady')
+                : `▶ ${t('lobby.start')}`}
           </Button>
         ) : (
           <Button
@@ -205,8 +231,8 @@ export function LobbyPage() {
       {lobby.notice && <Notice tone="warn">{t(`lobby.notice.${lobby.notice}`)}</Notice>}
       {state.lastError && <Notice tone="danger">{t(`err.${state.lastError}`)}</Notice>}
       <Card className="flex flex-col items-center gap-3 text-center">
-        <span className="text-sm text-muted">{t('lobby.code')}</span>
-        <span className="ltr text-5xl font-black tracking-[0.3em] text-accent" data-testid="lobby-code">
+        <span className="text-muted text-sm">{t('lobby.code')}</span>
+        <span className="ltr text-accent text-5xl font-black tracking-[0.3em]" data-testid="lobby-code">
           {lobby.code}
         </span>
         <Qr text={inviteLink(lobby.code)} />
@@ -234,19 +260,34 @@ export function LobbyPage() {
                 {!p.connected && <Badge>📴</Badge>}
               </span>
             }
-            trailing={<span aria-label={p.ready ? 'ready' : 'not ready'}>{p.id === lobby.hostId || p.ready ? '✅' : '⏳'}</span>}
+            trailing={
+              <span aria-label={p.ready ? 'ready' : 'not ready'}>
+                {p.id === lobby.hostId || p.ready ? '✅' : '⏳'}
+              </span>
+            }
           />
         ))}
       </div>
-      {isHost && <Toggle label={t('lobby.lock')} hint={t('lobby.lockHint')} checked={lobby.locked} onChange={(v) => store.lobbyAction({ type: 'lock', locked: v })} />}
+      {isHost && (
+        <Toggle
+          label={t('lobby.lock')}
+          hint={t('lobby.lockHint')}
+          checked={lobby.locked}
+          onChange={(v) => store.lobbyAction({ type: 'lock', locked: v })}
+        />
+      )}
 
       <SectionTitle>{t('lobby.game')}</SectionTitle>
       {gameMeta ? (
         <Card className="flex items-center gap-3" data-family={gameMeta.family}>
           <span className="text-3xl">{gameMeta.emoji}</span>
           <div className="flex-1">
-            <b className="text-accent" data-testid="selected-game">{t(`game.${gameMeta.id}.name`)}</b>
-            <p className="text-xs text-muted">{t('how.players', { min: gameMeta.minPlayers, max: gameMeta.maxPlayers })}</p>
+            <b className="text-accent" data-testid="selected-game">
+              {t(`game.${gameMeta.id}.name`)}
+            </b>
+            <p className="text-muted text-xs">
+              {t('how.players', { min: gameMeta.minPlayers, max: gameMeta.maxPlayers })}
+            </p>
           </div>
           <Button variant="ghost" size="icon" onClick={() => setHow(true)} aria-label={t('how.title')}>
             ❓
@@ -258,7 +299,9 @@ export function LobbyPage() {
           )}
         </Card>
       ) : (
-        <Card className="text-center text-muted">{isHost ? t('lobby.pickHint') : t('lobby.hostPicking')}</Card>
+        <Card className="text-muted text-center">
+          {isHost ? t('lobby.pickHint') : t('lobby.hostPicking')}
+        </Card>
       )}
       {isHost && (
         <Button variant="outline" onClick={() => setPicker(true)} data-testid="pick-game">
@@ -323,7 +366,7 @@ export function LobbyPage() {
         )}
       </Sheet>
       {gameMeta && <HowTo gameId={gameMeta.id} open={how} onClose={() => setHow(false)} />}
-      {role === 'host' && <p className="text-center text-xs text-muted">{t('lobby.hostHint')}</p>}
+      {role === 'host' && <p className="text-muted text-center text-xs">{t('lobby.hostHint')}</p>}
     </Screen>
   );
 }

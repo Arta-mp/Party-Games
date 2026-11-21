@@ -13,17 +13,23 @@ export function Scoreboard({ players, scores }: { players: Player[]; scores: Rec
     <Card className="flex flex-col gap-2" data-testid="scoreboard">
       {rows.map((p, i) => (
         <div key={p.id} className="flex items-center gap-3">
-          <span className="w-6 text-center text-sm text-muted">{num(i + 1)}</span>
+          <span className="text-muted w-6 text-center text-sm">{num(i + 1)}</span>
           <Avatar name={p.name} size={32} />
           <span className="flex-1 truncate font-bold">{p.name}</span>
-          <span className="font-black text-accent">{num(scores[p.id] ?? 0)}</span>
+          <span className="text-accent font-black">{num(scores[p.id] ?? 0)}</span>
         </div>
       ))}
     </Card>
   );
 }
 
-export function Awards({ session, players }: { session: Pick<LobbyState, 'scores' | 'stats'>; players: Player[] }) {
+export function Awards({
+  session,
+  players,
+}: {
+  session: Pick<LobbyState, 'scores' | 'stats'>;
+  players: Player[];
+}) {
   const t = useT();
   const num = useNum();
   const awards = sessionAwards({ ...(session as LobbyState), players: players as LobbyState['players'] });
@@ -34,10 +40,10 @@ export function Awards({ session, players }: { session: Pick<LobbyState, 'scores
         const p = players.find((x) => x.id === a.playerId);
         return (
           <Card key={a.key} className="flex flex-col items-center gap-1 p-3 text-center">
-            <span className="text-xs text-muted">{t(a.key)}</span>
+            <span className="text-muted text-xs">{t(a.key)}</span>
             {p && <Avatar name={p.name} size={36} />}
             <b className="truncate">{p?.name}</b>
-            <span className="text-xs text-muted">{num(a.value)}</span>
+            <span className="text-muted text-xs">{num(a.value)}</span>
           </Card>
         );
       })}
@@ -65,7 +71,7 @@ export function ResultsView({
   }, [won]);
   const name = (id: string) => players.find((p) => p.id === id)?.name ?? id;
   return (
-    <div className="flex flex-col gap-4 animate-pop" data-testid="results">
+    <div className="animate-pop flex flex-col gap-4" data-testid="results">
       <Confetti active={won} />
       <Card className="flex flex-col items-center gap-2 py-6 text-center">
         <span className="text-5xl">{won ? '🏆' : '🎭'}</span>
@@ -82,7 +88,11 @@ export function ResultsView({
             {t('results.secret')} <b className="text-accent">{result.secret}</b>
           </p>
         )}
-        {me && <Badge className={cn('mt-1 text-sm', won ? 'bg-success/20 text-text' : '')}>{won ? t('results.youWon') : t('results.youLost')}</Badge>}
+        {me && (
+          <Badge className={cn('mt-1 text-sm', won ? 'bg-success/20 text-text' : '')}>
+            {won ? t('results.youWon') : t('results.youLost')}
+          </Badge>
+        )}
       </Card>
       {result.reveal && result.reveal.length > 0 && (
         <>
@@ -93,7 +103,9 @@ export function ResultsView({
                 <Avatar name={name(r.playerId)} size={28} />
                 <span className="flex-1 truncate">{name(r.playerId)}</span>
                 <span className="text-sm font-bold">{r.label}</span>
-                {result.scores[r.playerId] ? <Badge className="bg-accent/20 text-text">+{num(result.scores[r.playerId]!)}</Badge> : null}
+                {result.scores[r.playerId] ? (
+                  <Badge className="bg-accent/20 text-text">+{num(result.scores[r.playerId]!)}</Badge>
+                ) : null}
               </div>
             ))}
           </Card>

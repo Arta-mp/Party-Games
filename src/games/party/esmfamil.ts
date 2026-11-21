@@ -13,7 +13,11 @@ export const EASY_LETTERS = 'ا ب پ ت ج چ ح خ د ر ز س ش ف ق ک گ 
 export const HARD_LETTERS = 'ث ذ ژ ص ض ط ظ ع غ'.split(' ');
 
 export const esmConfig = z.object({
-  columns: z.array(z.string().trim().min(1).max(24)).min(3).max(12).default(['اسم', 'فامیل', 'شهر', 'کشور', 'غذا', 'حیوان', 'اشیا', 'رنگ']),
+  columns: z
+    .array(z.string().trim().min(1).max(24))
+    .min(3)
+    .max(12)
+    .default(['اسم', 'فامیل', 'شهر', 'کشور', 'غذا', 'حیوان', 'اشیا', 'رنگ']),
   rounds: z.number().int().min(1).max(10).default(3),
   roundSeconds: z.number().int().min(30).max(600).default(120),
   stopGraceSeconds: z.number().int().min(0).max(30).default(5),
@@ -26,7 +30,12 @@ export const esmAction = z.discriminatedUnion('type', [
   z.object({ type: z.literal('stop') }),
   /** pass & play: the current writer starts their personal timer */
   z.object({ type: z.literal('startTurn') }),
-  z.object({ type: z.literal('reject'), player: z.string(), col: z.number().int().min(0).max(11), reject: z.boolean() }),
+  z.object({
+    type: z.literal('reject'),
+    player: z.string(),
+    col: z.number().int().min(0).max(11),
+    reject: z.boolean(),
+  }),
   z.object({ type: z.literal('finishJudge') }),
   z.object({ type: z.literal('nextRound') }),
 ]);
@@ -68,7 +77,9 @@ export interface EsmView {
   submitted: PlayerId[];
   turnEndsAt: number | null;
   /** answers of everyone — only after writing is over */
-  board: { player: PlayerId; answers: string[]; valid: boolean[]; rejectVotes: number[]; myRejects: boolean[] }[] | null;
+  board:
+    | { player: PlayerId; answers: string[]; valid: boolean[]; rejectVotes: number[]; myRejects: boolean[] }[]
+    | null;
   roundScores: Record<PlayerId, number[]> | null;
   totals: Record<PlayerId, number>;
 }
@@ -91,7 +102,8 @@ export function isRejected(s: EsmState, player: PlayerId, col: number): boolean 
 
 export function scoreRound(s: EsmState): Record<PlayerId, number[]> {
   const out: Record<PlayerId, number[]> = {};
-  const valid = (p: PlayerId, c: number) => autoValid(s.answers[p]?.[c] ?? '', s.letter) && !isRejected(s, p, c);
+  const valid = (p: PlayerId, c: number) =>
+    autoValid(s.answers[p]?.[c] ?? '', s.letter) && !isRejected(s, p, c);
   for (const p of s.players) out[p.id] = s.cfg.columns.map(() => 0);
   s.cfg.columns.forEach((_, c) => {
     const ok = s.players.filter((p) => valid(p.id, c));
@@ -124,7 +136,9 @@ function toJudge(s: EsmState) {
 }
 
 function pickLetter(s: EsmState, rng: { pick<T>(x: readonly T[]): T }) {
-  const pool = [...EASY_LETTERS, ...(s.cfg.hardLetters ? HARD_LETTERS : [])].filter((l) => !s.letters.includes(l));
+  const pool = [...EASY_LETTERS, ...(s.cfg.hardLetters ? HARD_LETTERS : [])].filter(
+    (l) => !s.letters.includes(l),
+  );
   return rng.pick(pool.length ? pool : EASY_LETTERS);
 }
 
@@ -204,7 +218,8 @@ export const esmFamil: GameModule<EsmConfig, EsmState, EsmAction, EsmView> = {
       }
       case 'reject': {
         if (s.phase !== 'judge' || (action.player === actor && !s.local)) return state;
-        if (!s.players.some((p) => p.id === action.player) || action.col >= s.cfg.columns.length) return state;
+        if (!s.players.some((p) => p.id === action.player) || action.col >= s.cfg.columns.length)
+          return state;
         if (s.local && !hostOk(s, actor)) return state;
         s.rejections[action.player] ??= {};
         const list = (s.rejections[action.player]![action.col] ??= []);
@@ -216,7 +231,8 @@ export const esmFamil: GameModule<EsmConfig, EsmState, EsmAction, EsmView> = {
       case 'finishJudge': {
         if (s.phase !== 'judge' || !hostOk(s, actor)) return state;
         s.roundScores = scoreRound(s);
-        for (const [p, arr] of Object.entries(s.roundScores)) s.totals[p] = (s.totals[p] ?? 0) + arr.reduce((a, b) => a + b, 0);
+        for (const [p, arr] of Object.entries(s.roundScores))
+          s.totals[p] = (s.totals[p] ?? 0) + arr.reduce((a, b) => a + b, 0);
         s.phase = s.round >= s.cfg.rounds ? 'over' : 'scored';
         return s;
       }
@@ -247,9 +263,13 @@ export const esmFamil: GameModule<EsmConfig, EsmState, EsmAction, EsmView> = {
         ? s.players.map((p) => ({
             player: p.id,
             answers: s.answers[p.id] ?? [],
-            valid: s.cfg.columns.map((_, c) => autoValid(s.answers[p.id]?.[c] ?? '', s.letter) && !isRejected(s, p.id, c)),
+            valid: s.cfg.columns.map(
+              (_, c) => autoValid(s.answers[p.id]?.[c] ?? '', s.letter) && !isRejected(s, p.id, c),
+            ),
             rejectVotes: s.cfg.columns.map((_, c) => s.rejections[p.id]?.[c]?.length ?? 0),
-            myRejects: s.cfg.columns.map((_, c) => viewer !== 'public' && !!s.rejections[p.id]?.[c]?.includes(viewer)),
+            myRejects: s.cfg.columns.map(
+              (_, c) => viewer !== 'public' && !!s.rejections[p.id]?.[c]?.includes(viewer),
+            ),
           }))
         : null,
       roundScores: s.roundScores,
@@ -264,7 +284,10 @@ export const esmFamil: GameModule<EsmConfig, EsmState, EsmAction, EsmView> = {
     for (const w of winners) scores[w] = 3;
     return {
       winners,
-      title: { k: 'esm.result', p: { names: winners.map((w) => s.players.find((p) => p.id === w)?.name ?? '').join('، ') || '—' } },
+      title: {
+        k: 'esm.result',
+        p: { names: winners.map((w) => s.players.find((p) => p.id === w)?.name ?? '').join('، ') || '—' },
+      },
       lines: [{ k: 'esm.resultLine', p: { n: max } }],
       scores,
       reveal: s.players.map((p) => ({ playerId: p.id, label: `${s.totals[p.id] ?? 0}` })),
@@ -272,7 +295,11 @@ export const esmFamil: GameModule<EsmConfig, EsmState, EsmAction, EsmView> = {
     };
   },
   pending(s) {
-    if (s.phase === 'write' && s.local) return s.players.map((p) => p.id).filter((id) => !s.submitted.includes(id)).slice(0, 1);
+    if (s.phase === 'write' && s.local)
+      return s.players
+        .map((p) => p.id)
+        .filter((id) => !s.submitted.includes(id))
+        .slice(0, 1);
     return [];
   },
   deadline: (s) => (s.phase !== 'write' ? null : s.local ? s.turnEndsAt : s.endsAt),

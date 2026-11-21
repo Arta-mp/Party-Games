@@ -80,7 +80,10 @@ export const uniqueClue: GameModule<UniqueConfig, UniqueState, UniqueAction, Uni
     local: opts.local,
     hostId: opts.hostId,
     players: rng.shuffle(players),
-    words: rng.sample(itemsOf('words', cfg.packs).map((w) => w.word), cfg.rounds),
+    words: rng.sample(
+      itemsOf('words', cfg.packs).map((w) => w.word),
+      cfg.rounds,
+    ),
     round: 0,
     phase: 'clues',
     clues: {},
@@ -142,7 +145,12 @@ export const uniqueClue: GameModule<UniqueConfig, UniqueState, UniqueAction, Uni
       phase: s.phase,
       players: s.players,
       guesser,
-      word: isGuesser && !after ? null : viewer === 'public' && !after ? null : (s.words[Math.min(s.round, s.words.length - 1)] ?? null),
+      word:
+        isGuesser && !after
+          ? null
+          : viewer === 'public' && !after
+            ? null
+            : (s.words[Math.min(s.round, s.words.length - 1)] ?? null),
       round: s.round,
       total: s.words.length,
       submitted: Object.keys(s.clues),
@@ -174,6 +182,7 @@ export const uniqueClue: GameModule<UniqueConfig, UniqueState, UniqueAction, Uni
     if (s.phase === 'guess') return [g];
     return [];
   },
-  validate: (_c, n) => (n < 3 ? { k: 'err.minPlayers', p: { n: 3 } } : n > 10 ? { k: 'err.maxPlayers', p: { n: 10 } } : null),
+  validate: (_c, n) =>
+    n < 3 ? { k: 'err.minPlayers', p: { n: 3 } } : n > 10 ? { k: 'err.maxPlayers', p: { n: 10 } } : null,
   screens: { Setup: UniqueSetup, Play: UniquePlay },
 };

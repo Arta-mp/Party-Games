@@ -10,17 +10,24 @@ const NAMES = ['میزبان', 'سارا', 'رضا', 'مینا'];
 async function tab(page: Page, name: string, i: number) {
   await page.addInitScript(
     ([n, idx]) => {
-      sessionStorage.setItem('pg:identity', JSON.stringify({ name: n, deviceId: `dtab${idx}`.padEnd(25, '0') }));
-      localStorage.setItem('pg:settings', JSON.stringify({ tutorialSeen: true, sound: false, vibration: false }));
+      sessionStorage.setItem(
+        'pg:identity',
+        JSON.stringify({ name: n, deviceId: `dtab${idx}`.padEnd(25, '0') }),
+      );
+      localStorage.setItem(
+        'pg:settings',
+        JSON.stringify({ tutorialSeen: true, sound: false, vibration: false }),
+      );
       (window as unknown as { __pgWireLog: unknown[] }).__pgWireLog = [];
     },
     [name, i] as const,
   );
 }
 
-const wire = (p: Page) => p.evaluate(() => JSON.stringify((window as unknown as { __pgWireLog: unknown[] }).__pgWireLog));
+const wire = (p: Page) =>
+  p.evaluate(() => JSON.stringify((window as unknown as { __pgWireLog: unknown[] }).__pgWireLog));
 
-test('4 tabs: lobby, ready, spy round; no client receives another player\'s secret', async ({ context }) => {
+test("4 tabs: lobby, ready, spy round; no client receives another player's secret", async ({ context }) => {
   const pages: Page[] = [];
   for (let i = 0; i < 4; i++) {
     const p = await context.newPage();
@@ -63,7 +70,9 @@ test('4 tabs: lobby, ready, spy round; no client receives another player\'s secr
 
   // ---- secrecy at the wire level
   for (let i = 0; i < 4; i++) {
-    const log = JSON.parse(await wire(pages[i]!)) as { w: { $: string; d?: { t: string; view?: Record<string, unknown> } } }[];
+    const log = JSON.parse(await wire(pages[i]!)) as {
+      w: { $: string; d?: { t: string; view?: Record<string, unknown> } };
+    }[];
     const views = log.filter((e) => e.w.$ === 'm' && e.w.d?.t === 'view').map((e) => e.w.d!.view!);
     const lobbies = log.filter((e) => e.w.$ === 'm' && e.w.d?.t === 'lobby');
     if (i > 0) expect(views.length).toBeGreaterThan(0); // the host tab gets its view via loopback

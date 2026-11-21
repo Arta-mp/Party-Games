@@ -18,7 +18,11 @@ describe('share codes (lz-string)', () => {
     expect(decodeShare('garbage')).toBeNull();
     const bad = encodeShare({ v: 1, kind: 'info-role', data: { ...WITNESS, sees: 'everything' } } as never);
     expect(decodeShare(bad)).toBeNull();
-    const evil = encodeShare({ v: 1, kind: 'ability-role', data: { ...MAFIA_ROLES.doctor, night: [{ action: 'eval(alert(1))' }] } } as never);
+    const evil = encodeShare({
+      v: 1,
+      kind: 'ability-role',
+      data: { ...MAFIA_ROLES.doctor, night: [{ action: 'eval(alert(1))' }] },
+    } as never);
     expect(decodeShare(evil)).toBeNull();
   });
   it('parses links, bare codes and exported JSON', () => {
@@ -30,27 +34,57 @@ describe('share codes (lz-string)', () => {
     expect(parseImport(JSON.stringify(payload))?.data).toEqual(WITNESS);
   });
   it('bundles several items', () => {
-    const code = encodeShare({ v: 1, kind: 'bundle', data: { packs: [], infoRoles: [WITNESS], abilityRoles: [MAFIA_ROLES.doctor] } });
+    const code = encodeShare({
+      v: 1,
+      kind: 'bundle',
+      data: { packs: [], infoRoles: [WITNESS], abilityRoles: [MAFIA_ROLES.doctor] },
+    });
     const b = decodeShare(code);
     expect(b?.kind === 'bundle' && b.data.abilityRoles[0]?.id).toBe('doctor');
   });
   it('role schemas reject bad input', () => {
-    expect(infoRoleSchema.safeParse({ id: 'X Y', nameFa: 'a', team: 'citizens', sees: 'secret' }).success).toBe(false);
+    expect(
+      infoRoleSchema.safeParse({ id: 'X Y', nameFa: 'a', team: 'citizens', sees: 'secret' }).success,
+    ).toBe(false);
     expect(abilityRoleSchema.safeParse({ id: 'ok', nameFa: 'a', team: 'aliens' }).success).toBe(false);
-    expect(abilityRoleSchema.safeParse({ id: 'ok', nameFa: 'a', team: 'mafia', night: { action: 'kill', uses: 0 } }).success).toBe(false);
+    expect(
+      abilityRoleSchema.safeParse({
+        id: 'ok',
+        nameFa: 'a',
+        team: 'mafia',
+        night: { action: 'kill', uses: 0 },
+      }).success,
+    ).toBe(false);
   });
 });
 
 describe('pack text format', () => {
-  const meta = (kind: Parameters<typeof parsePackText>[0]['kind']) => ({ id: 'my-pack', nameFa: 'پک من', kind });
+  const meta = (kind: Parameters<typeof parsePackText>[0]['kind']) => ({
+    id: 'my-pack',
+    nameFa: 'پک من',
+    kind,
+  });
   it('parses every kind', () => {
-    expect(parsePackText(meta('words'), 'پیتزا | غذا | ۲\nچای').pack?.items).toEqual([{ word: 'پیتزا', category: 'غذا', difficulty: 2 }, { word: 'چای' }]);
-    expect(parsePackText(meta('locations'), 'نانوایی: نانوا، شاطر، مشتری').pack?.items).toEqual([{ name: 'نانوایی', roles: ['نانوا', 'شاطر', 'مشتری'] }]);
+    expect(parsePackText(meta('words'), 'پیتزا | غذا | ۲\nچای').pack?.items).toEqual([
+      { word: 'پیتزا', category: 'غذا', difficulty: 2 },
+      { word: 'چای' },
+    ]);
+    expect(parsePackText(meta('locations'), 'نانوایی: نانوا، شاطر، مشتری').pack?.items).toEqual([
+      { name: 'نانوایی', roles: ['نانوا', 'شاطر', 'مشتری'] },
+    ]);
     expect(parsePackText(meta('pairs'), 'چای / قهوه').pack?.items).toEqual([{ a: 'چای', b: 'قهوه' }]);
-    expect(parsePackText(meta('cards'), 'دریا: آب، موج، ساحل، شنا، آبی').pack?.items[0]).toMatchObject({ word: 'دریا' });
-    expect(parsePackText(meta('spectrums'), 'سرد / داغ').pack?.items).toEqual([{ left: 'سرد', right: 'داغ' }]);
-    expect(parsePackText(meta('questions'), 'سؤال تست؟ | family | truth').pack?.items).toEqual([{ q: 'سؤال تست؟', level: 'family', type: 'truth' }]);
-    expect(parsePackText(meta('trivia'), 'پایتخت استرالیا؟ | کانبرا').pack?.items).toEqual([{ q: 'پایتخت استرالیا؟', answer: 'کانبرا' }]);
+    expect(parsePackText(meta('cards'), 'دریا: آب، موج، ساحل، شنا، آبی').pack?.items[0]).toMatchObject({
+      word: 'دریا',
+    });
+    expect(parsePackText(meta('spectrums'), 'سرد / داغ').pack?.items).toEqual([
+      { left: 'سرد', right: 'داغ' },
+    ]);
+    expect(parsePackText(meta('questions'), 'سؤال تست؟ | family | truth').pack?.items).toEqual([
+      { q: 'سؤال تست؟', level: 'family', type: 'truth' },
+    ]);
+    expect(parsePackText(meta('trivia'), 'پایتخت استرالیا؟ | کانبرا').pack?.items).toEqual([
+      { q: 'پایتخت استرالیا؟', answer: 'کانبرا' },
+    ]);
     expect(parsePackText(meta('columns'), 'گل').pack?.items).toEqual([{ name: 'گل' }]);
   });
   it('reports bad lines with line numbers', () => {

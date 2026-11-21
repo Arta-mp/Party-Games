@@ -88,7 +88,11 @@ export const useOnline = create<OnlineStore>((set, get) => {
     const h =
       p.kind === 'snapshot'
         ? await HostSession.restore(p.data, deps(code))
-        : HostSession.fromLobby(p.lobby as LobbyState, { id: get().state!.playerId!, deviceId: hello().deviceId }, deps(code));
+        : HostSession.fromLobby(
+            p.lobby as LobbyState,
+            { id: get().state!.playerId!, deviceId: hello().deviceId },
+            deps(code),
+          );
     await h.start();
     startLoopback(code, h);
   };

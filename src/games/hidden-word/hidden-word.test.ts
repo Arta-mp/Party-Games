@@ -4,8 +4,14 @@ import { WITNESS, type HWState, type HWView } from './core';
 import { insider, type InsiderState, type InsiderView } from './insider';
 import { spyBlank, spyClassic, spyGrid, spyInfiltrator, spyMulti, spyRoles, spyTopic } from './modes';
 
-const spiesOf = (s: HWState) => Object.entries(s.assign).filter(([, a]) => a.roleId === 'spy').map(([id]) => id);
-const citizensOf = (s: HWState) => Object.entries(s.assign).filter(([, a]) => a.roleId === 'citizen').map(([id]) => id);
+const spiesOf = (s: HWState) =>
+  Object.entries(s.assign)
+    .filter(([, a]) => a.roleId === 'spy')
+    .map(([id]) => id);
+const citizensOf = (s: HWState) =>
+  Object.entries(s.assign)
+    .filter(([, a]) => a.roleId === 'citizen')
+    .map(([id]) => id);
 
 function ackAll(d: Driver) {
   for (const id of d.ids()) d.act(id, { type: 'ack' });
@@ -64,7 +70,8 @@ describe('spy.classic', () => {
     d.act('p1', { type: 'startVote' });
     const s = d.state as HWState;
     const spy = spiesOf(s)[0]!;
-    for (const id of d.ids()) d.act(id, { type: 'vote', target: id === spy ? d.ids().find((x) => x !== spy)! : spy });
+    for (const id of d.ids())
+      d.act(id, { type: 'vote', target: id === spy ? d.ids().find((x) => x !== spy)! : spy });
     expect((d.state as HWState).phase).toBe('guess');
     expect(d.pending()).toEqual([spy]);
     expect((d.view(spy) as HWView).guess?.options).toContain(s.secret);
@@ -83,7 +90,8 @@ describe('spy.classic', () => {
     d.act('p1', { type: 'startVote' });
     const s = d.state as HWState;
     const spy = spiesOf(s)[0]!;
-    for (const id of d.ids()) d.act(id, { type: 'vote', target: id === spy ? d.ids().find((x) => x !== spy)! : spy });
+    for (const id of d.ids())
+      d.act(id, { type: 'vote', target: id === spy ? d.ids().find((x) => x !== spy)! : spy });
     d.act(spy, { type: 'guess', answer: 'جای اشتباه' });
     const r = d.result()!;
     expect(r.title.k).toBe('hw.result.citizens');
@@ -96,7 +104,8 @@ describe('spy.classic', () => {
     d.act('p1', { type: 'startVote' });
     const s = d.state as HWState;
     const victim = citizensOf(s)[0]!;
-    for (const id of d.ids()) d.act(id, { type: 'vote', target: id === victim ? d.ids().find((x) => x !== victim)! : victim });
+    for (const id of d.ids())
+      d.act(id, { type: 'vote', target: id === victim ? d.ids().find((x) => x !== victim)! : victim });
     expect(d.result()!.title.k).toBe('hw.result.spies');
   });
 
@@ -135,7 +144,10 @@ describe('spy.classic', () => {
     d.noop('p1', { type: 'vote', target: 'p1' });
     d.noop('p1', { type: 'vote', target: 'nobody' });
     expect(d.runner.dispatch({ type: 'vote' }, 'p1', d.now)).toEqual({ ok: false, error: 'bad-action' });
-    expect(d.runner.dispatch({ type: 'ack' }, 'intruder', d.now)).toEqual({ ok: false, error: 'not-a-player' });
+    expect(d.runner.dispatch({ type: 'ack' }, 'intruder', d.now)).toEqual({
+      ok: false,
+      error: 'not-a-player',
+    });
   });
 
   it('host-recorded vote mode', () => {
@@ -150,7 +162,12 @@ describe('spy.classic', () => {
   });
 
   it('pass & play lets the shared screen run host actions', () => {
-    const d = new Driver(spyClassic, makePlayers(4), { ...spyClassic.defaultConfig, voteMode: 'host' }, { local: true });
+    const d = new Driver(
+      spyClassic,
+      makePlayers(4),
+      { ...spyClassic.defaultConfig, voteMode: 'host' },
+      { local: true },
+    );
     ackAll(d);
     d.act('p3', { type: 'startVote' });
     expect((d.state as HWState).phase).toBe('vote');
@@ -176,11 +193,24 @@ describe('spy.multi', () => {
     expect(blind).toHaveLength(2);
   });
   it('spies know each other only when enabled', () => {
-    const on = new Driver(spyMulti, makePlayers(7), { ...spyMulti.defaultConfig, spyCount: 3, spiesKnowEachOther: true });
+    const on = new Driver(spyMulti, makePlayers(7), {
+      ...spyMulti.defaultConfig,
+      spyCount: 3,
+      spiesKnowEachOther: true,
+    });
     const sOn = on.state as HWState;
-    for (const spy of spiesOf(sOn)) expect((on.view(spy) as HWView).me?.knows.map((k) => k.id).sort()).toEqual(spiesOf(sOn).filter((x) => x !== spy).sort());
+    for (const spy of spiesOf(sOn))
+      expect((on.view(spy) as HWView).me?.knows.map((k) => k.id).sort()).toEqual(
+        spiesOf(sOn)
+          .filter((x) => x !== spy)
+          .sort(),
+      );
     for (const c of citizensOf(sOn)) expect((on.view(c) as HWView).me?.knows).toEqual([]);
-    const off = new Driver(spyMulti, makePlayers(7), { ...spyMulti.defaultConfig, spyCount: 3, spiesKnowEachOther: false });
+    const off = new Driver(spyMulti, makePlayers(7), {
+      ...spyMulti.defaultConfig,
+      spyCount: 3,
+      spiesKnowEachOther: false,
+    });
     for (const spy of spiesOf(off.state as HWState)) expect((off.view(spy) as HWView).me?.knows).toEqual([]);
   });
   it('validate rejects too many spies', () => {
@@ -204,7 +234,12 @@ describe('spy.topic', () => {
   });
   it('respects the selected categories', () => {
     for (let seed = 0; seed < 10; seed++) {
-      const d = new Driver(spyTopic, makePlayers(4), { ...spyTopic.defaultConfig, categories: ['میوه'] }, { seed });
+      const d = new Driver(
+        spyTopic,
+        makePlayers(4),
+        { ...spyTopic.defaultConfig, categories: ['میوه'] },
+        { seed },
+      );
       const spy = spiesOf(d.state as HWState)[0]!;
       expect((d.view(spy) as HWView).me?.category).toBe('میوه');
     }
@@ -286,7 +321,9 @@ describe('spy.infiltrator / spy.blank (multi-round elimination)', () => {
   });
 
   it('needs at least one infiltrator or blank', () => {
-    expect(spyInfiltrator.validate!({ ...spyInfiltrator.defaultConfig, infiltrators: 0, blanks: 0 }, 5)?.k).toBe('err.needOneSpy');
+    expect(
+      spyInfiltrator.validate!({ ...spyInfiltrator.defaultConfig, infiltrators: 0, blanks: 0 }, 5)?.k,
+    ).toBe('err.needOneSpy');
   });
 });
 
@@ -320,8 +357,17 @@ describe('custom information roles (§7.2)', () => {
   });
 
   it('a data-only custom role ("double agent": sees nothing, knows spies, citizen team) works without code', () => {
-    const doubleAgent = { ...WITNESS, id: 'double', nameFa: 'مأمور دوجانبه', sees: 'category' as const, onEliminated: 'none' as const };
-    const d = new Driver(spyClassic, makePlayers(6), { ...spyClassic.defaultConfig, extraRoles: [{ role: doubleAgent, n: 1 }] });
+    const doubleAgent = {
+      ...WITNESS,
+      id: 'double',
+      nameFa: 'مأمور دوجانبه',
+      sees: 'category' as const,
+      onEliminated: 'none' as const,
+    };
+    const d = new Driver(spyClassic, makePlayers(6), {
+      ...spyClassic.defaultConfig,
+      extraRoles: [{ role: doubleAgent, n: 1 }],
+    });
     const s = d.state as HWState;
     const id = Object.entries(s.assign).find(([, a]) => a.roleId === 'double')![0];
     const v = d.view(id) as HWView;
@@ -347,7 +393,10 @@ describe('spy.insider', () => {
     ackAll(d);
     expect((d.state as InsiderState).phase).toBe('search');
     const finder = d.ids().find((id) => id !== s.guide)!;
-    d.noop(d.ids().find((id) => id !== s.guide && id !== 'p1')!, { type: 'found', finder });
+    d.noop(
+      d.ids().find((id) => id !== s.guide && id !== 'p1')!,
+      { type: 'found', finder },
+    );
     d.act(s.guide, { type: 'found', finder });
     expect((d.view(finder) as InsiderView).word).toBe(s.word);
     d.advance(120_000);

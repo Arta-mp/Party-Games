@@ -20,7 +20,11 @@ export const questionItem = z.object({
 export const triviaItem = z.object({ q: z.string().trim().min(5).max(240), answer: text });
 export const columnItem = z.object({ name: text });
 
-const base = { id: z.string().regex(/^[a-z0-9-]{2,40}$/), nameFa: text, author: z.string().max(60).optional() };
+const base = {
+  id: z.string().regex(/^[a-z0-9-]{2,40}$/),
+  nameFa: text,
+  author: z.string().max(60).optional(),
+};
 
 export const packSchema = z.discriminatedUnion('kind', [
   z.object({ ...base, kind: z.literal('locations'), items: z.array(locationItem).min(1) }),

@@ -1,7 +1,13 @@
 import { GameRunner, type RunnerSnapshot } from '@/core/engine/runner';
 import { randomSeed } from '@/core/engine/rng';
 import type { AnyGameModule, Player, PlayerId } from '@/core/engine/types';
-import { clientMsgSchema, type ClientMsg, type Hello, type HostMsg, type LobbyAction } from '@/core/net/protocol';
+import {
+  clientMsgSchema,
+  type ClientMsg,
+  type Hello,
+  type HostMsg,
+  type LobbyAction,
+} from '@/core/net/protocol';
 import type { Transport, Unsubscribe } from '@/core/net/transport';
 import {
   addPlayer,
@@ -73,12 +79,19 @@ export class HostSession {
   }
 
   /** Resume after a page refresh (same epoch) or take over a transferred snapshot (higher epoch). */
-  static async restore(snap: HostSnapshot, deps: HostDeps, opts: { asHost?: PlayerId; epoch?: number } = {}): Promise<HostSession> {
+  static async restore(
+    snap: HostSnapshot,
+    deps: HostDeps,
+    opts: { asHost?: PlayerId; epoch?: number } = {},
+  ): Promise<HostSession> {
     const lobby: LobbyState = {
       ...snap.lobby,
       hostId: opts.asHost ?? snap.lobby.hostId,
       epoch: opts.epoch ?? snap.lobby.epoch,
-      players: snap.lobby.players.map((p) => ({ ...p, connected: p.id === (opts.asHost ?? snap.lobby.hostId) })),
+      players: snap.lobby.players.map((p) => ({
+        ...p,
+        connected: p.id === (opts.asHost ?? snap.lobby.hostId),
+      })),
     };
     const s = new HostSession(deps, lobby);
     for (const [d, p] of Object.entries(snap.devices)) s.devices.set(d, p);
@@ -100,7 +113,12 @@ export class HostSession {
       status: 'lobby',
       result: null,
       notice: prev.status === 'playing' ? 'hostLeftGame' : 'hostLeft',
-      players: prev.players.map((p) => ({ ...p, connected: p.id === me.id, ready: p.id === me.id, lastSeen: deps.now() })),
+      players: prev.players.map((p) => ({
+        ...p,
+        connected: p.id === me.id,
+        ready: p.id === me.id,
+        lastSeen: deps.now(),
+      })),
     };
     const s = new HostSession(deps, lobby);
     s.devices.set(me.deviceId, me.id);
@@ -159,7 +177,12 @@ export class HostSession {
 
   handle(peer: string, raw: unknown) {
     if (this.stopped) return;
-    if (raw && typeof raw === 'object' && (raw as HostMsg).t === 'error' && (raw as { code?: string }).code === 'superseded') {
+    if (
+      raw &&
+      typeof raw === 'object' &&
+      (raw as HostMsg).t === 'error' &&
+      (raw as { code?: string }).code === 'superseded'
+    ) {
       this.stop();
       this.deps.onStepDown?.('superseded');
       return;
@@ -173,7 +196,8 @@ export class HostSession {
     if (!player) return this.send(peer, { t: 'error', code: 'not-joined' });
     const env = msg.action;
     if (env.scope === 'lobby') return void this.onLobbyAction(player, env.a);
-    if (!this.runner || this.lobby.status !== 'playing') return this.send(peer, { t: 'error', code: 'no-game' });
+    if (!this.runner || this.lobby.status !== 'playing')
+      return this.send(peer, { t: 'error', code: 'no-game' });
     const r = this.runner.dispatch(env.a, player, this.deps.now());
     if (!r.ok) return this.send(peer, { t: 'error', code: r.error });
     if (r.changed) this.afterGameChange();
@@ -278,10 +302,13 @@ export class HostSession {
       }
       case 'start':
       case 'next': {
-        if (canStart(l) !== 'ok' && a.type === 'start') return this.sendTo(l.hostId, { t: 'error', code: canStart(l) });
+        if (canStart(l) !== 'ok' && a.type === 'start')
+          return this.sendTo(l.hostId, { t: 'error', code: canStart(l) });
         if (!l.game) return;
         const mod = await this.deps.loadGame(l.game.id);
-        const players: Player[] = this.lobby.players.filter((p) => p.connected).map((p) => ({ id: p.id, name: p.name }));
+        const players: Player[] = this.lobby.players
+          .filter((p) => p.connected)
+          .map((p) => ({ id: p.id, name: p.name }));
         const invalid = mod.validate?.(l.game.config as never, players.length);
         if (invalid) return this.sendTo(l.hostId, { t: 'error', code: invalid.k });
         this.runner = GameRunner.create(mod, players, l.game.config, {
@@ -291,7 +318,13 @@ export class HostSession {
           local: false,
         });
         this.rev++;
-        this.lobby = { ...this.lobby, status: 'playing', round: this.lobby.round + 1, result: null, notice: null };
+        this.lobby = {
+          ...this.lobby,
+          status: 'playing',
+          round: this.lobby.round + 1,
+          result: null,
+          notice: null,
+        };
         this.broadcastLobby();
         this.pushViews();
         this.persist();
@@ -389,7 +422,11 @@ export class HostSession {
   }
 
   private broadcastLobby() {
-    const msg: HostMsg = { t: 'lobby', lobby: this.lobby as unknown as Record<string, unknown>, now: this.deps.now() };
+    const msg: HostMsg = {
+      t: 'lobby',
+      lobby: this.lobby as unknown as Record<string, unknown>,
+      now: this.deps.now(),
+    };
     this.deps.transport.broadcast(msg);
     for (const key of this.locals.keys()) this.send(key, msg);
   }

@@ -274,7 +274,17 @@ describe('online lobby (host-authoritative over LocalTransport)', () => {
 
   it('players offline for more than 60s are removed from the lobby (not mid-game)', () => {
     const l: LobbyState = {
-      code: 'AAAA', epoch: 0, hostId: 'p1', locked: false, status: 'lobby', game: null, scores: {}, stats: {}, round: 0, result: null, notice: null,
+      code: 'AAAA',
+      epoch: 0,
+      hostId: 'p1',
+      locked: false,
+      status: 'lobby',
+      game: null,
+      scores: {},
+      stats: {},
+      round: 0,
+      result: null,
+      notice: null,
       players: [
         { id: 'p1', name: 'h', connected: true, ready: true, joinedAt: 0, lastSeen: 0 },
         { id: 'p2', name: 'x', connected: false, ready: false, joinedAt: 1, lastSeen: 0 },
@@ -361,7 +371,11 @@ describe('online lobby (host-authoritative over LocalTransport)', () => {
     const prev = (phones[0]!.promoted[0] as { lobby: LobbyState }).lobby;
     phones[0]!.c.close();
     const t2 = new LocalTransport(env.hub);
-    const host2 = HostSession.fromLobby(prev, { id: phones[0]!.c.state.playerId!, deviceId: phones[0]!.deviceId }, env.deps(t2));
+    const host2 = HostSession.fromLobby(
+      prev,
+      { id: phones[0]!.c.state.playerId!, deviceId: phones[0]!.deviceId },
+      env.deps(t2),
+    );
     await host2.start();
     await flush(10);
     expect(host2.lobby.epoch).toBe(1);
@@ -375,7 +389,11 @@ describe('online lobby (host-authoritative over LocalTransport)', () => {
     const env = setup();
     await env.host.start();
     const t2 = new LocalTransport(env.hub);
-    const newer = HostSession.fromLobby(env.host.lobby, { id: 'p9', deviceId: 'device-new-host' }, env.deps(t2));
+    const newer = HostSession.fromLobby(
+      env.host.lobby,
+      { id: 'p9', deviceId: 'device-new-host' },
+      env.deps(t2),
+    );
     await newer.start();
     await flush(10);
     expect(env.stepDowns).toContain('superseded');
@@ -398,7 +416,11 @@ describe('online lobby (host-authoritative over LocalTransport)', () => {
   });
 
   it('session awards', () => {
-    const l = { players: [{ id: 'a' }, { id: 'b' }], scores: { a: 3, b: 5 }, stats: { a: { 'spy-win': 2 } } } as unknown as LobbyState;
+    const l = {
+      players: [{ id: 'a' }, { id: 'b' }],
+      scores: { a: 3, b: 5 },
+      stats: { a: { 'spy-win': 2 } },
+    } as unknown as LobbyState;
     const awards = sessionAwards(l);
     expect(awards).toContainEqual({ key: 'award.night', playerId: 'b', value: 5 });
     expect(awards).toContainEqual({ key: 'award.spy', playerId: 'a', value: 2 });

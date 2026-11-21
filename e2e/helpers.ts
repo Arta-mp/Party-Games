@@ -9,9 +9,20 @@ export async function asUser(page: Page, name: string, extra: Record<string, unk
   await page.addInitScript(
     ([n, e]) => {
       if (!localStorage.getItem('pg:identity')) {
-        localStorage.setItem('pg:identity', JSON.stringify({ name: n, deviceId: 'd' + Math.random().toString(16).slice(2).padEnd(24, '0').slice(0, 24) }));
+        localStorage.setItem(
+          'pg:identity',
+          JSON.stringify({
+            name: n,
+            deviceId: 'd' + Math.random().toString(16).slice(2).padEnd(24, '0').slice(0, 24),
+          }),
+        );
       }
-      localStorage.setItem('pg:settings', JSON.stringify({ tutorialSeen: true, sound: false, vibration: false, ...(e as object) }));
+      if (!localStorage.getItem('pg:settings')) {
+        localStorage.setItem(
+          'pg:settings',
+          JSON.stringify({ tutorialSeen: true, sound: false, vibration: false, ...(e as object) }),
+        );
+      }
     },
     [name, extra] as const,
   );
@@ -31,8 +42,12 @@ export async function holdAndRead(page: Page): Promise<{ role: string; word: str
   await expect(card).toHaveAttribute('aria-pressed', 'true');
   await page.waitForTimeout(300);
   const text = await page.getByTestId('role-card').innerText();
-  const role = (await page.getByTestId('role-name').count()) ? await page.getByTestId('role-name').innerText() : '';
-  const word = (await page.getByTestId('secret-word').count()) ? await page.getByTestId('secret-word').innerText() : null;
+  const role = (await page.getByTestId('role-name').count())
+    ? await page.getByTestId('role-name').innerText()
+    : '';
+  const word = (await page.getByTestId('secret-word').count())
+    ? await page.getByTestId('secret-word').innerText()
+    : null;
   return { role, word, text };
 }
 
@@ -40,8 +55,16 @@ export async function release(page: Page) {
   await page.mouse.up();
 }
 
-export async function newPhone(browser: Browser, name: string, extra: Record<string, unknown> = {}): Promise<{ ctx: BrowserContext; page: Page }> {
-  const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
+export async function newPhone(
+  browser: Browser,
+  name: string,
+  extra: Record<string, unknown> = {},
+): Promise<{ ctx: BrowserContext; page: Page }> {
+  const ctx = await browser.newContext({
+    viewport: { width: 390, height: 844 },
+    hasTouch: true,
+    isMobile: true,
+  });
   const page = await ctx.newPage();
   await asUser(page, name, extra);
   return { ctx, page };

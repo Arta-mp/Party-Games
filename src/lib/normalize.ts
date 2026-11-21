@@ -4,17 +4,17 @@
  * converts Persian/Arabic digits to Latin and lowercases Latin letters.
  */
 const MAP: Record<string, string> = {
-  'ي': 'ی',
-  'ى': 'ی',
-  'ئ': 'ی',
-  'ك': 'ک',
-  'ة': 'ه',
-  'ۀ': 'ه',
-  'أ': 'ا',
-  'إ': 'ا',
-  'آ': 'ا',
-  'ٱ': 'ا',
-  'ؤ': 'و',
+  ي: 'ی',
+  ى: 'ی',
+  ئ: 'ی',
+  ك: 'ک',
+  ة: 'ه',
+  ۀ: 'ه',
+  أ: 'ا',
+  إ: 'ا',
+  آ: 'ا',
+  ٱ: 'ا',
+  ؤ: 'و',
 };
 
 const DIACRITICS = /[\u064B-\u065F\u0670\u06D6-\u06ED]/g;
@@ -24,7 +24,9 @@ const PUNCT = /[.,،؛;:!?؟"'«»()[\]{}\-_/\\]/g;
 export function normalizeFa(input: string): string {
   let s = input.normalize('NFC').replace(DIACRITICS, '').replace(INVISIBLES, '');
   s = s.replace(/[يىئكةۀأإآٱؤ]/g, (ch) => MAP[ch] ?? ch);
-  s = s.replace(/[۰-۹]/g, (d) => String(d.charCodeAt(0) - 0x06f0)).replace(/[٠-٩]/g, (d) => String(d.charCodeAt(0) - 0x0660));
+  s = s
+    .replace(/[۰-۹]/g, (d) => String(d.charCodeAt(0) - 0x06f0))
+    .replace(/[٠-٩]/g, (d) => String(d.charCodeAt(0) - 0x0660));
   s = s.replace(PUNCT, ' ').replace(/\s+/g, ' ').trim().toLowerCase();
   return s;
 }

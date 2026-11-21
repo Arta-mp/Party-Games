@@ -10,7 +10,13 @@ export function DuetSetup({ config, onChange }: SetupProps<DuetConfig>) {
   const t = useT();
   return (
     <div className="flex flex-col gap-3">
-      <Stepper label={t('duet.cfg.turns')} value={config.turns} min={5} max={15} onChange={(turns) => onChange({ ...config, turns })} />
+      <Stepper
+        label={t('duet.cfg.turns')}
+        value={config.turns}
+        min={5}
+        max={15}
+        onChange={(turns) => onChange({ ...config, turns })}
+      />
       <PackPicker kind="words" value={config.packs} onChange={(packs) => onChange({ ...config, packs })} />
     </div>
   );
@@ -27,7 +33,12 @@ export function DuetPlay({ view, dispatch, me }: PlayProps<DuetView, DuetAction>
   // revealed: found agents; outline: my key; marks: bystanders seen from each side
   const colors: CellColor[] = view.words.map((_, i) => {
     if (view.found[i]) return 'green';
-    if (view.fullKey) return view.fullKey[0][i] === 'A' || view.fullKey[1][i] === 'A' ? 'black' : view.fullKey[0][i] === 'G' || view.fullKey[1][i] === 'G' ? 'green' : 'neutral';
+    if (view.fullKey)
+      return view.fullKey[0][i] === 'A' || view.fullKey[1][i] === 'A'
+        ? 'black'
+        : view.fullKey[0][i] === 'G' || view.fullKey[1][i] === 'G'
+          ? 'green'
+          : 'neutral';
     const k = view.myKey?.[i];
     return k === 'G' ? 'green' : k === 'A' ? 'black' : null;
   });
@@ -39,13 +50,22 @@ export function DuetPlay({ view, dispatch, me }: PlayProps<DuetView, DuetAction>
         <Badge data-testid="duet-turns">{t('duet.turnsLeft', { n: num(view.turnsLeft) })}</Badge>
         <Badge>{t('duet.giverIs', { name: name(view.giver) })}</Badge>
       </div>
-      <p className="text-xs text-muted">{t('duet.legend')}</p>
+      <p className="text-muted text-xs">{t('duet.legend')}</p>
       {view.clue && (
         <Card className="py-3 text-center text-xl font-black" data-testid="clue">
           «{view.clue.word}» {view.clue.count === 0 ? '∞' : num(view.clue.count)}
         </Card>
       )}
-      <WordGrid words={view.words} revealed={view.found} colors={colors} marks={marks} disabled={!(view.phase === 'guess' && amGuesser)} onPick={view.phase === 'guess' && amGuesser ? (i) => dispatch({ type: 'reveal', index: i }) : undefined} />
+      <WordGrid
+        words={view.words}
+        revealed={view.found}
+        colors={colors}
+        marks={marks}
+        disabled={!(view.phase === 'guess' && amGuesser)}
+        onPick={
+          view.phase === 'guess' && amGuesser ? (i) => dispatch({ type: 'reveal', index: i }) : undefined
+        }
+      />
       {view.phase === 'clue' &&
         (amGiver ? (
           <form
@@ -56,8 +76,21 @@ export function DuetPlay({ view, dispatch, me }: PlayProps<DuetView, DuetAction>
               setWord('');
             }}
           >
-            <TextField value={word} onChange={(e) => setWord(e.target.value.replace(/\s+/g, ''))} placeholder={t('cw.cluePlaceholder')} data-testid="duet-clue" aria-label={t('cw.cluePlaceholder')} />
-            <Stepper label={t('cw.count')} value={count} min={0} max={9} format={(v) => (v === 0 ? '∞' : num(v))} onChange={setCount} />
+            <TextField
+              value={word}
+              onChange={(e) => setWord(e.target.value.replace(/\s+/g, ''))}
+              placeholder={t('cw.cluePlaceholder')}
+              data-testid="duet-clue"
+              aria-label={t('cw.cluePlaceholder')}
+            />
+            <Stepper
+              label={t('cw.count')}
+              value={count}
+              min={0}
+              max={9}
+              format={(v) => (v === 0 ? '∞' : num(v))}
+              onChange={setCount}
+            />
             <Button type="submit" size="lg" disabled={!word.trim()} data-testid="duet-send">
               {t('cw.giveClue')}
             </Button>

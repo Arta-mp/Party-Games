@@ -55,9 +55,20 @@ export const drawConfig = z.object({
 export type DrawConfig = z.infer<typeof drawConfig>;
 
 const strokeSchema = z.object({
-  c: z.number().int().min(0).max(COLORS.length - 1),
-  w: z.number().int().min(0).max(WIDTHS.length - 1),
-  d: z.string().max(2400).regex(/^[A-Za-z0-9_-]*$/),
+  c: z
+    .number()
+    .int()
+    .min(0)
+    .max(COLORS.length - 1),
+  w: z
+    .number()
+    .int()
+    .min(0)
+    .max(WIDTHS.length - 1),
+  d: z
+    .string()
+    .max(2400)
+    .regex(/^[A-Za-z0-9_-]*$/),
 });
 export type Stroke = z.infer<typeof strokeSchema>;
 
@@ -130,7 +141,10 @@ export const drawing: GameModule<DrawConfig, DrawState, DrawAction, DrawView> = 
   defaultConfig: drawConfig.parse({}),
   setup(players, cfg, rng, opts) {
     const order = Array.from({ length: cfg.rounds }, () => rng.shuffle(players.map((p) => p.id))).flat();
-    const words = rng.sample(itemsOf('words', cfg.packs).map((w) => w.word), order.length);
+    const words = rng.sample(
+      itemsOf('words', cfg.packs).map((w) => w.word),
+      order.length,
+    );
     return {
       local: opts.local,
       hostId: opts.hostId,
@@ -161,7 +175,8 @@ export const drawing: GameModule<DrawConfig, DrawState, DrawAction, DrawView> = 
         s.solved = [];
         return s;
       case 'stroke':
-        if (s.phase !== 'draw' || !(actor === drawer || s.local) || s.strokes.length >= MAX_STROKES) return state;
+        if (s.phase !== 'draw' || !(actor === drawer || s.local) || s.strokes.length >= MAX_STROKES)
+          return state;
         s.strokes.push(action.s);
         return s;
       case 'undo':
@@ -181,7 +196,8 @@ export const drawing: GameModule<DrawConfig, DrawState, DrawAction, DrawView> = 
         return s;
       }
       case 'mark':
-        if (s.phase !== 'draw' || !drawerOrHost || !s.players.some((p) => p.id === action.player)) return state;
+        if (s.phase !== 'draw' || !drawerOrHost || !s.players.some((p) => p.id === action.player))
+          return state;
         solve(s, action.player);
         return s;
       case '$timeout':
@@ -215,7 +231,11 @@ export const drawing: GameModule<DrawConfig, DrawState, DrawAction, DrawView> = 
       totalTurns: s.order.length,
       strokes: s.strokes,
       // correct guesses would reveal the word: hide their text until the reveal
-      guesses: s.guesses.map((g) => ({ p: g.p, ok: g.ok, text: g.ok && !reveal && viewer !== g.p ? null : g.text })),
+      guesses: s.guesses.map((g) => ({
+        p: g.p,
+        ok: g.ok,
+        text: g.ok && !reveal && viewer !== g.p ? null : g.text,
+      })),
       solved: s.solved,
       scores: s.scores,
       local: s.local,

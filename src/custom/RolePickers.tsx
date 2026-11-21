@@ -22,9 +22,16 @@ export function InfoRolePicker({
   };
   return (
     <div className="flex flex-col gap-2">
-      <span className="text-sm font-bold text-muted">{t('roles.extraInfo')}</span>
+      <span className="text-muted text-sm font-bold">{t('roles.extraInfo')}</span>
       {roles.map((r) => (
-        <Stepper key={r.id} label={`${r.emoji} ${r.nameFa}`} value={countOf(r.id)} min={0} max={Math.max(1, r.count.max)} onChange={(n) => setCount(r, n)} />
+        <Stepper
+          key={r.id}
+          label={`${r.emoji} ${r.nameFa}`}
+          value={countOf(r.id)}
+          min={0}
+          max={Math.max(1, r.count.max)}
+          onChange={(n) => setCount(r, n)}
+        />
       ))}
     </div>
   );

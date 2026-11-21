@@ -7,7 +7,10 @@ describe('party.liar', () => {
     const d = new Driver(liar, makePlayers(3), { ...liar.defaultConfig, rounds: 2 });
     const s = () => d.state as LiarState;
     const truth = s().questions[0]!.answer;
-    expect(d.runner.dispatch({ type: 'lie', text: ` ${truth} ` }, 'p1', d.now)).toEqual({ ok: false, error: 'liar-too-true' });
+    expect(d.runner.dispatch({ type: 'lie', text: ` ${truth} ` }, 'p1', d.now)).toEqual({
+      ok: false,
+      error: 'liar-too-true',
+    });
     d.act('p1', { type: 'lie', text: 'دروغ یک' });
     expectNoLeak(d.view('p2'), ['دروغ یک', truth]);
     d.act('p2', { type: 'lie', text: 'دروغ دو' });

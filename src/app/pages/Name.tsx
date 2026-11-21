@@ -25,7 +25,7 @@ export function NamePage() {
       >
         <span className="text-6xl">👋</span>
         <h1 className="text-3xl font-black">{t('name.title')}</h1>
-        <p className="max-w-xs text-sm text-muted">{t('name.subtitle')}</p>
+        <p className="text-muted max-w-xs text-sm">{t('name.subtitle')}</p>
         <Avatar name={cleanName(value) || '?'} size={88} />
         <div className="w-full">
           <TextField

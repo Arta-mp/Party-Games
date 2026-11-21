@@ -29,7 +29,11 @@ export const duetConfig = z.object({
 export type DuetConfig = z.infer<typeof duetConfig>;
 
 export const duetAction = z.discriminatedUnion('type', [
-  z.object({ type: z.literal('clue'), word: z.string().trim().min(1).max(30), count: z.number().int().min(0).max(9) }),
+  z.object({
+    type: z.literal('clue'),
+    word: z.string().trim().min(1).max(30),
+    count: z.number().int().min(0).max(9),
+  }),
   z.object({ type: z.literal('reveal'), index: z.number().int().min(0).max(24) }),
   z.object({ type: z.literal('endTurn') }),
 ]);
@@ -69,7 +73,8 @@ export interface DuetView {
   fullKey: [K[], K[]] | null;
 }
 
-const agentCount = (s: DuetState) => s.words.filter((_, i) => (s.keys[0][i] === 'G' || s.keys[1][i] === 'G') && !s.found[i]).length;
+const agentCount = (s: DuetState) =>
+  s.words.filter((_, i) => (s.keys[0][i] === 'G' || s.keys[1][i] === 'G') && !s.found[i]).length;
 
 function nextTurn(s: DuetState) {
   s.turnsLeft--;
@@ -174,7 +179,8 @@ export const duet: GameModule<DuetConfig, DuetState, DuetAction, DuetView> = {
       scores: won ? { [s.players[0]]: 3, [s.players[1]]: 3 } : {},
     };
   },
-  pending: (s) => (s.phase === 'clue' ? [s.players[s.giver]] : s.phase === 'guess' ? [s.players[s.giver === 0 ? 1 : 0]] : []),
+  pending: (s) =>
+    s.phase === 'clue' ? [s.players[s.giver]] : s.phase === 'guess' ? [s.players[s.giver === 0 ? 1 : 0]] : [],
   validate: (_c, n) => (n !== 2 ? { k: 'duet.err.two' } : null),
   screens: { Setup: DuetSetup, Play: DuetPlay },
 };

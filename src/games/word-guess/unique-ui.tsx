@@ -11,7 +11,13 @@ export function UniqueSetup({ config, onChange }: SetupProps<UniqueConfig>) {
   const t = useT();
   return (
     <div className="flex flex-col gap-3">
-      <Stepper label={t('unique.cfg.rounds')} value={config.rounds} min={3} max={20} onChange={(rounds) => onChange({ ...config, rounds })} />
+      <Stepper
+        label={t('unique.cfg.rounds')}
+        value={config.rounds}
+        min={3}
+        max={20}
+        onChange={(rounds) => onChange({ ...config, rounds })}
+      />
       <PackPicker kind="words" value={config.packs} onChange={(packs) => onChange({ ...config, packs })} />
     </div>
   );
@@ -31,9 +37,15 @@ export function UniquePlay({ view, dispatch, me, isHost }: PlayProps<UniqueView,
   const clueList = view.clues && (
     <div className="flex flex-wrap gap-2" data-testid="clues">
       {view.clues.map((c) => (
-        <span key={c.p} className={cn('rounded-xl px-3 py-2 font-bold', c.kept ? 'bg-accent/20' : 'bg-surface-2 text-muted line-through')}>
+        <span
+          key={c.p}
+          className={cn(
+            'rounded-xl px-3 py-2 font-bold',
+            c.kept ? 'bg-accent/20' : 'bg-surface-2 text-muted line-through',
+          )}
+        >
           {c.text}
-          {!amGuesser && <span className="ms-1 text-xs font-normal text-muted">({name(c.p)})</span>}
+          {!amGuesser && <span className="text-muted ms-1 text-xs font-normal">({name(c.p)})</span>}
         </span>
       ))}
     </div>
@@ -44,7 +56,13 @@ export function UniquePlay({ view, dispatch, me, isHost }: PlayProps<UniqueView,
       return (
         <div className="flex flex-col gap-3">
           {header}
-          <Notice>{t('unique.waitClues', { name: name(view.guesser), n: view.submitted.length, total: view.players.length - 1 })}</Notice>
+          <Notice>
+            {t('unique.waitClues', {
+              name: name(view.guesser),
+              n: view.submitted.length,
+              total: view.players.length - 1,
+            })}
+          </Notice>
         </div>
       );
     }
@@ -52,7 +70,7 @@ export function UniquePlay({ view, dispatch, me, isHost }: PlayProps<UniqueView,
       <div className="flex flex-col gap-3">
         {header}
         <Card className="flex flex-col items-center gap-2 py-6">
-          <span className="text-sm text-muted">{t('unique.wordFor', { name: name(view.guesser) })}</span>
+          <span className="text-muted text-sm">{t('unique.wordFor', { name: name(view.guesser) })}</span>
           <BigWord className="text-accent">
             <span data-testid="unique-word">{view.word}</span>
           </BigWord>
@@ -68,7 +86,14 @@ export function UniquePlay({ view, dispatch, me, isHost }: PlayProps<UniqueView,
               setText('');
             }}
           >
-            <TextField value={text} onChange={(e) => setText(e.target.value.replace(/\s+/g, ''))} placeholder={t('unique.cluePlaceholder')} maxLength={30} data-testid="clue-input" aria-label={t('unique.cluePlaceholder')} />
+            <TextField
+              value={text}
+              onChange={(e) => setText(e.target.value.replace(/\s+/g, ''))}
+              placeholder={t('unique.cluePlaceholder')}
+              maxLength={30}
+              data-testid="clue-input"
+              aria-label={t('unique.cluePlaceholder')}
+            />
             <Button type="submit" size="lg" disabled={!text.trim()} data-testid="clue-send">
               {t('common.confirm')}
             </Button>
@@ -83,7 +108,9 @@ export function UniquePlay({ view, dispatch, me, isHost }: PlayProps<UniqueView,
       <div className="flex flex-col gap-3">
         {header}
         {clueList}
-        {view.clues?.every((c) => !c.kept) && amGuesser && <Notice tone="warn">{t('unique.allRemoved')}</Notice>}
+        {view.clues?.every((c) => !c.kept) && amGuesser && (
+          <Notice tone="warn">{t('unique.allRemoved')}</Notice>
+        )}
         {amGuesser || (isHost && !me) ? (
           <form
             className="flex flex-col gap-2"
@@ -93,7 +120,13 @@ export function UniquePlay({ view, dispatch, me, isHost }: PlayProps<UniqueView,
               setText('');
             }}
           >
-            <TextField value={text} onChange={(e) => setText(e.target.value)} placeholder={t('hw.typeGuess')} data-testid="unique-guess" aria-label={t('hw.typeGuess')} />
+            <TextField
+              value={text}
+              onChange={(e) => setText(e.target.value)}
+              placeholder={t('hw.typeGuess')}
+              data-testid="unique-guess"
+              aria-label={t('hw.typeGuess')}
+            />
             <div className="grid grid-cols-2 gap-2">
               <Button type="submit" size="lg" disabled={!text.trim()} data-testid="unique-guess-send">
                 {t('hw.submitGuess')}
@@ -114,10 +147,11 @@ export function UniquePlay({ view, dispatch, me, isHost }: PlayProps<UniqueView,
     <div className="flex flex-col gap-3">
       {header}
       <Card className="flex flex-col items-center gap-2 py-6 text-center">
-        <span className="text-sm text-muted">{t('unique.wordWas')}</span>
+        <span className="text-muted text-sm">{t('unique.wordWas')}</span>
         <BigWord>{view.word}</BigWord>
         <p>
-          {t('unique.guessed', { name: name(view.guesser), g: view.guess ?? '—' })} {view.correct ? '✅' : '❌'}
+          {t('unique.guessed', { name: name(view.guesser), g: view.guess ?? '—' })}{' '}
+          {view.correct ? '✅' : '❌'}
         </p>
       </Card>
       {clueList}

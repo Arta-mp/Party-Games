@@ -39,10 +39,14 @@ export function SettingsPage() {
         ]}
       />
       <Toggle label={`🔊 ${t('settings.sound')}`} checked={s.sound} onChange={(sound) => s.set({ sound })} />
-      <Toggle label={`📳 ${t('settings.vibration')}`} checked={s.vibration} onChange={(vibration) => s.set({ vibration })} />
+      <Toggle
+        label={`📳 ${t('settings.vibration')}`}
+        checked={s.vibration}
+        onChange={(vibration) => s.set({ vibration })}
+      />
 
       <SectionTitle>{t('settings.network')}</SectionTitle>
-      <p className="text-xs leading-6 text-muted">{t('settings.networkHint')}</p>
+      <p className="text-muted text-xs leading-6">{t('settings.networkHint')}</p>
       <Segmented<TransportKind>
         value={s.transport}
         onChange={(transport) => s.set({ transport })}
@@ -53,16 +57,38 @@ export function SettingsPage() {
           { value: 'broadcast', label: t('settings.sameDevice') },
         ]}
       />
-      <TextField label={t('settings.turnUrl')} value={s.turnUrl} onChange={(e) => s.set({ turnUrl: e.target.value.trim() })} placeholder="turn:example.com:3478" className="ltr text-base" />
+      <TextField
+        label={t('settings.turnUrl')}
+        value={s.turnUrl}
+        onChange={(e) => s.set({ turnUrl: e.target.value.trim() })}
+        placeholder="turn:example.com:3478"
+        className="ltr text-base"
+      />
       <div className="grid grid-cols-2 gap-2">
-        <TextField label={t('settings.turnUser')} value={s.turnUser} onChange={(e) => s.set({ turnUser: e.target.value })} className="ltr text-base" />
-        <TextField label={t('settings.turnPass')} type="password" value={s.turnPass} onChange={(e) => s.set({ turnPass: e.target.value })} className="ltr text-base" />
+        <TextField
+          label={t('settings.turnUser')}
+          value={s.turnUser}
+          onChange={(e) => s.set({ turnUser: e.target.value })}
+          className="ltr text-base"
+        />
+        <TextField
+          label={t('settings.turnPass')}
+          type="password"
+          value={s.turnPass}
+          onChange={(e) => s.set({ turnPass: e.target.value })}
+          className="ltr text-base"
+        />
       </div>
 
       <SectionTitle>{t('settings.about')}</SectionTitle>
-      <Card className="text-sm leading-7 text-muted">
+      <Card className="text-muted text-sm leading-7">
         {t('settings.aboutText')}{' '}
-        <a className="text-accent underline" href="https://github.com/Arta-mp/Party-Games" target="_blank" rel="noreferrer">
+        <a
+          className="text-accent underline"
+          href="https://github.com/Arta-mp/Party-Games"
+          target="_blank"
+          rel="noreferrer"
+        >
           GitHub
         </a>
         <div className="ltr mt-1 text-xs">v{__APP_VERSION__}</div>

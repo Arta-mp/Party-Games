@@ -1,6 +1,14 @@
 import { z } from 'zod';
 import type { Rng } from '@/core/engine/rng';
-import { clone, type Ctx, type GameResult, type Player, type PlayerId, type SetupOptions, type SystemAction } from '@/core/engine/types';
+import {
+  clone,
+  type Ctx,
+  type GameResult,
+  type Player,
+  type PlayerId,
+  type SetupOptions,
+  type SystemAction,
+} from '@/core/engine/types';
 
 /**
  * Shared team core of the word-guess family (§6-ج): auto teams, turn order, cards, turn timer,
@@ -112,7 +120,12 @@ function advanceCard(s: WGState, result: 'correct' | 'skip' | 'buzz') {
   s.pos++;
 }
 
-export function reduceWG(state: WGState, action: WGAction | SystemAction, actor: PlayerId, ctx: Ctx): WGState {
+export function reduceWG(
+  state: WGState,
+  action: WGAction | SystemAction,
+  actor: PlayerId,
+  ctx: Ctx,
+): WGState {
   const s = clone(state);
   const { team, player } = performerOf(s);
   const isPerformer = actor === player || s.local;
@@ -223,10 +236,22 @@ export function resultWG(s: WGState): GameResult | null {
   const mvp = Object.entries(s.performed).sort((a, b) => b[1] - a[1])[0];
   return {
     winners,
-    title: winTeams.length > 1 ? { k: 'wg.result.tie' } : { k: s.teams.every((t) => t.length === 1) ? 'wg.result.player' : 'wg.result.team', p: { team: winTeams[0]! + 1, name: s.players.find((p) => p.id === s.teams[winTeams[0]!]![0])?.name ?? '' } },
+    title:
+      winTeams.length > 1
+        ? { k: 'wg.result.tie' }
+        : {
+            k: s.teams.every((t) => t.length === 1) ? 'wg.result.player' : 'wg.result.team',
+            p: {
+              team: winTeams[0]! + 1,
+              name: s.players.find((p) => p.id === s.teams[winTeams[0]!]![0])?.name ?? '',
+            },
+          },
     lines: s.scores.map((v, i) => ({ k: 'wg.teamScore', p: { team: i + 1, n: v } })),
     scores: Object.fromEntries(winners.map((w) => [w, 2])),
-    reveal: s.players.map((p) => ({ playerId: p.id, label: `${s.teams.length > 1 && s.teams.some((t) => t.length > 1) ? `T${teamOf(s, p.id) + 1} · ` : ''}${s.performed[p.id] ?? 0}` })),
+    reveal: s.players.map((p) => ({
+      playerId: p.id,
+      label: `${s.teams.length > 1 && s.teams.some((t) => t.length > 1) ? `T${teamOf(s, p.id) + 1} · ` : ''}${s.performed[p.id] ?? 0}`,
+    })),
     highlights: mvp && mvp[1] > 0 ? [{ key: 'mvp', playerId: mvp[0] }] : [],
   };
 }

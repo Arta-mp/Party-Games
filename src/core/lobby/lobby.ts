@@ -50,7 +50,10 @@ export function createLobby(code: string, host: { id: PlayerId; name: string }, 
 }
 
 export function addPlayer(l: LobbyState, id: PlayerId, rawName: string, now: number): LobbyState {
-  const name = uniqueName(rawName, l.players.map((p) => p.name));
+  const name = uniqueName(
+    rawName,
+    l.players.map((p) => p.name),
+  );
   return {
     ...l,
     players: [...l.players, { id, name, connected: true, ready: false, joinedAt: now, lastSeen: now }],
@@ -71,7 +74,9 @@ export function removePlayer(l: LobbyState, id: PlayerId): LobbyState {
 /** Lobby-only: drop players who have been offline longer than the grace period. */
 export function sweep(l: LobbyState, now: number): LobbyState {
   if (l.status !== 'lobby') return l;
-  const stale = l.players.filter((p) => !p.connected && p.id !== l.hostId && now - p.lastSeen > RECONNECT_GRACE_MS);
+  const stale = l.players.filter(
+    (p) => !p.connected && p.id !== l.hostId && now - p.lastSeen > RECONNECT_GRACE_MS,
+  );
   if (stale.length === 0) return l;
   return { ...l, players: l.players.filter((p) => !stale.includes(p)) };
 }
@@ -100,7 +105,12 @@ export function applyResult(l: LobbyState, r: GameResult): LobbyState {
  * Deterministic host election used when the host vanished: the k-th oldest connected player
  * (k grows every `grace` ms, in case the first candidate is gone too).
  */
-export function electHost(l: LobbyState, elapsedMs: number, graceMs: number, isAlive: (id: PlayerId) => boolean = () => true): PlayerId | null {
+export function electHost(
+  l: LobbyState,
+  elapsedMs: number,
+  graceMs: number,
+  isAlive: (id: PlayerId) => boolean = () => true,
+): PlayerId | null {
   if (elapsedMs < graceMs) return null;
   const candidates = l.players
     .filter((p) => p.id !== l.hostId && p.connected && isAlive(p.id))

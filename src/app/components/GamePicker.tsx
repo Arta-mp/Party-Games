@@ -6,7 +6,17 @@ import { cn } from '@/ui/cn';
 import { Badge, Button, Notice, Sheet } from '@/ui/kit';
 import { HowTo } from './HowTo';
 
-export function GameCard({ meta, disabled, onClick, selected }: { meta: GameMeta; disabled?: boolean; onClick?: () => void; selected?: boolean }) {
+export function GameCard({
+  meta,
+  disabled,
+  onClick,
+  selected,
+}: {
+  meta: GameMeta;
+  disabled?: boolean;
+  onClick?: () => void;
+  selected?: boolean;
+}) {
   const t = useT();
   const num = useNum();
   return (
@@ -17,24 +27,39 @@ export function GameCard({ meta, disabled, onClick, selected }: { meta: GameMeta
       data-family={meta.family}
       data-testid={`game-${meta.id}`}
       className={cn(
-        'flex min-h-20 w-full items-center gap-3 rounded-2xl border border-border bg-surface p-3 text-start transition active:scale-[.98] disabled:opacity-40',
-        selected && 'border-accent ring-2 ring-accent',
+        'border-border bg-surface flex min-h-20 w-full items-center gap-3 rounded-2xl border p-3 text-start transition active:scale-[.98] disabled:opacity-40',
+        selected && 'border-accent ring-accent ring-2',
       )}
     >
-      <span className="grid size-12 shrink-0 place-items-center rounded-2xl bg-accent/15 text-2xl">{meta.emoji}</span>
+      <span className="bg-accent/15 grid size-12 shrink-0 place-items-center rounded-2xl text-2xl">
+        {meta.emoji}
+      </span>
       <span className="flex min-w-0 flex-1 flex-col gap-0.5">
         <span className="font-black">{t(`game.${meta.id}.name`)}</span>
-        <span className="line-clamp-2 text-xs leading-5 text-muted">{t(`game.${meta.id}.desc`)}</span>
+        <span className="text-muted line-clamp-2 text-xs leading-5">{t(`game.${meta.id}.desc`)}</span>
       </span>
       <Badge className="shrink-0">
-        {meta.maxPlayers >= 30 ? `${num(meta.minPlayers)}+` : `${num(meta.minPlayers)}–${num(meta.maxPlayers)}`} 👤
+        {meta.maxPlayers >= 30
+          ? `${num(meta.minPlayers)}+`
+          : `${num(meta.minPlayers)}–${num(meta.maxPlayers)}`}{' '}
+        👤
       </Badge>
     </button>
   );
 }
 
 /** Family → mode browser. Modes that don't fit the current player count are disabled. */
-export function GamePicker({ playerCount, mode, onPick, selected }: { playerCount: number; mode: PlayMode; onPick: (id: string) => void; selected?: string | null }) {
+export function GamePicker({
+  playerCount,
+  mode,
+  onPick,
+  selected,
+}: {
+  playerCount: number;
+  mode: PlayMode;
+  onPick: (id: string) => void;
+  selected?: string | null;
+}) {
   const t = useT();
   const [open, setOpen] = useState<string | null>(null);
   return (
@@ -43,7 +68,7 @@ export function GamePicker({ playerCount, mode, onPick, selected }: { playerCoun
         const games = gamesOf(f.id);
         const isOpen = open === f.id || games.some((g) => g.id === selected);
         return (
-          <div key={f.id} data-family={f.id} className="rounded-3xl border border-border bg-surface-2/50 p-2">
+          <div key={f.id} data-family={f.id} className="border-border bg-surface-2/50 rounded-3xl border p-2">
             <button
               type="button"
               className="flex h-14 w-full items-center gap-3 px-2 text-start"
@@ -52,13 +77,19 @@ export function GamePicker({ playerCount, mode, onPick, selected }: { playerCoun
               data-testid={`family-${f.id}`}
             >
               <span className="text-2xl">{f.emoji}</span>
-              <span className="flex-1 text-lg font-black text-accent">{t(`family.${f.id}`)}</span>
+              <span className="text-accent flex-1 text-lg font-black">{t(`family.${f.id}`)}</span>
               <span className="text-muted">{isOpen ? '▴' : '▾'}</span>
             </button>
             {isOpen && (
               <div className="flex flex-col gap-2 p-1">
                 {games.map((g) => (
-                  <GameCard key={g.id} meta={g} selected={selected === g.id} disabled={!playable(g, playerCount, mode)} onClick={() => onPick(g.id)} />
+                  <GameCard
+                    key={g.id}
+                    meta={g}
+                    selected={selected === g.id}
+                    disabled={!playable(g, playerCount, mode)}
+                    onClick={() => onPick(g.id)}
+                  />
                 ))}
               </div>
             )}
@@ -110,7 +141,7 @@ export function GameConfigSheet({
     <Sheet open={!!gameId} onClose={onClose} title={gameId ? `${t(`game.${gameId}.name`)}` : ''}>
       {gameId && (
         <div data-family={mod?.family} className="flex flex-col gap-3">
-          <p className="text-sm leading-7 text-muted">{t(`game.${gameId}.desc`)}</p>
+          <p className="text-muted text-sm leading-7">{t(`game.${gameId}.desc`)}</p>
           <Button variant="secondary" onClick={() => setHow(true)}>
             ❓ {t('how.title')}
           </Button>
@@ -121,7 +152,12 @@ export function GameConfigSheet({
             </Suspense>
           )}
           {invalid && <Notice tone="warn">{tm(invalid)}</Notice>}
-          <Button size="lg" disabled={!mod} onClick={() => mod && onConfirm(gameId, config)} data-testid="confirm-game">
+          <Button
+            size="lg"
+            disabled={!mod}
+            onClick={() => mod && onConfirm(gameId, config)}
+            data-testid="confirm-game"
+          >
             {t('lobby.chooseThis')}
           </Button>
           <HowTo gameId={gameId} open={how} onClose={() => setHow(false)} />

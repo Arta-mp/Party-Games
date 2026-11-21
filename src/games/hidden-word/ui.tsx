@@ -35,18 +35,42 @@ export function makeHiddenWordSetup(packKind: HWPackKind): ComponentType<SetupPr
   };
 }
 
-export function HiddenWordSetup({ config, onChange, packKind }: SetupProps<AnyCfg> & { packKind: HWPackKind }) {
+export function HiddenWordSetup({
+  config,
+  onChange,
+  packKind,
+}: SetupProps<AnyCfg> & { packKind: HWPackKind }) {
   const t = useT();
   const num = useNum();
   const set = (patch: Record<string, unknown>) => onChange({ ...config, ...patch } as AnyCfg);
-  const fmtTime = (v: number) => (v === 0 ? t('common.noTimer') : t('common.minSec', { m: Math.floor(v / 60), s: num(v % 60).padStart(2, num(0)) }));
+  const fmtTime = (v: number) =>
+    v === 0
+      ? t('common.noTimer')
+      : t('common.minSec', { m: Math.floor(v / 60), s: num(v % 60).padStart(2, num(0)) });
   const cats = useMemo(
-    () => ('categories' in config ? [...new Set(itemsOf('words', undefined).map((w) => w.category).filter(Boolean) as string[])] : []),
+    () =>
+      'categories' in config
+        ? [
+            ...new Set(
+              itemsOf('words', undefined)
+                .map((w) => w.category)
+                .filter(Boolean) as string[],
+            ),
+          ]
+        : [],
     [config],
   );
   return (
     <div className="flex flex-col gap-3">
-      <Stepper label={t('hw.cfg.roundTime')} value={config.roundSeconds} min={0} max={900} step={30} onChange={(v) => set({ roundSeconds: v })} format={fmtTime} />
+      <Stepper
+        label={t('hw.cfg.roundTime')}
+        value={config.roundSeconds}
+        min={0}
+        max={900}
+        step={30}
+        onChange={(v) => set({ roundSeconds: v })}
+        format={fmtTime}
+      />
       <Segmented
         label={t('hw.cfg.voteMode')}
         value={config.voteMode}
@@ -57,23 +81,49 @@ export function HiddenWordSetup({ config, onChange, packKind }: SetupProps<AnyCf
         ]}
       />
       {'spyCount' in config && (
-        <Stepper label={t('hw.cfg.spyCount')} value={config.spyCount as number} min={2} max={3} onChange={(v) => set({ spyCount: v })} />
+        <Stepper
+          label={t('hw.cfg.spyCount')}
+          value={config.spyCount as number}
+          min={2}
+          max={3}
+          onChange={(v) => set({ spyCount: v })}
+        />
       )}
       {'spiesKnowEachOther' in config && (
-        <Toggle label={t('hw.cfg.spiesKnow')} checked={config.spiesKnowEachOther as boolean} onChange={(v) => set({ spiesKnowEachOther: v })} />
+        <Toggle
+          label={t('hw.cfg.spiesKnow')}
+          checked={config.spiesKnowEachOther as boolean}
+          onChange={(v) => set({ spiesKnowEachOther: v })}
+        />
       )}
       {'withRoles' in config && (
-        <Toggle label={t('hw.cfg.withRoles')} checked={config.withRoles as boolean} onChange={(v) => set({ withRoles: v })} />
+        <Toggle
+          label={t('hw.cfg.withRoles')}
+          checked={config.withRoles as boolean}
+          onChange={(v) => set({ withRoles: v })}
+        />
       )}
       {'infiltrators' in config && (
-        <Stepper label={t('hw.cfg.infiltrators')} value={config.infiltrators as number} min={0} max={3} onChange={(v) => set({ infiltrators: v })} />
+        <Stepper
+          label={t('hw.cfg.infiltrators')}
+          value={config.infiltrators as number}
+          min={0}
+          max={3}
+          onChange={(v) => set({ infiltrators: v })}
+        />
       )}
       {'blanks' in config && (
-        <Stepper label={t('hw.cfg.blanks')} value={config.blanks as number} min={0} max={2} onChange={(v) => set({ blanks: v })} />
+        <Stepper
+          label={t('hw.cfg.blanks')}
+          value={config.blanks as number}
+          min={0}
+          max={2}
+          onChange={(v) => set({ blanks: v })}
+        />
       )}
       {'categories' in config && (
         <div className="flex flex-col gap-1.5">
-          <span className="text-sm font-bold text-muted">{t('hw.cfg.categories')}</span>
+          <span className="text-muted text-sm font-bold">{t('hw.cfg.categories')}</span>
           <div className="flex flex-wrap gap-2">
             {cats.map((c) => {
               const list = config.categories as string[];
@@ -84,22 +134,21 @@ export function HiddenWordSetup({ config, onChange, packKind }: SetupProps<AnyCf
                   type="button"
                   aria-pressed={on}
                   onClick={() => set({ categories: on ? list.filter((x) => x !== c) : [...list, c] })}
-                  className={cn('h-10 rounded-full border px-3 text-sm font-bold', on ? 'border-accent bg-accent/20' : 'border-border')}
+                  className={cn(
+                    'h-10 rounded-full border px-3 text-sm font-bold',
+                    on ? 'border-accent bg-accent/20' : 'border-border',
+                  )}
                 >
                   {c}
                 </button>
               );
             })}
           </div>
-          <span className="text-xs text-muted">{t('hw.cfg.categoriesHint')}</span>
+          <span className="text-muted text-xs">{t('hw.cfg.categoriesHint')}</span>
         </div>
       )}
       {'packs' in config && (
-        <PackPicker
-          kind={packKind}
-          value={config.packs as never}
-          onChange={(packs) => set({ packs })}
-        />
+        <PackPicker kind={packKind} value={config.packs as never} onChange={(packs) => set({ packs })} />
       )}
       {'extraRoles' in config && packKind !== 'pairs' && (
         <InfoRolePicker value={config.extraRoles as never} onChange={(extraRoles) => set({ extraRoles })} />
@@ -125,7 +174,13 @@ export function RoleCard({ view }: { view: HWView }) {
       )}
       {me.word ? (
         <>
-          <span className="text-sm text-muted">{view.grid ? t('hw.secretInGrid') : me.category ? t('hw.yourWordIn', { c: me.category }) : t('hw.yourWord')}</span>
+          <span className="text-muted text-sm">
+            {view.grid
+              ? t('hw.secretInGrid')
+              : me.category
+                ? t('hw.yourWordIn', { c: me.category })
+                : t('hw.yourWord')}
+          </span>
           <BigWord className="text-accent">
             <span data-testid="secret-word">{me.word}</span>
           </BigWord>
@@ -136,7 +191,7 @@ export function RoleCard({ view }: { view: HWView }) {
           {me.category ? t('hw.onlyCategory', { c: me.category }) : t('hw.noWord')}
         </span>
       )}
-      {me.description && <p className="max-w-xs text-xs leading-6 text-muted">{me.description}</p>}
+      {me.description && <p className="text-muted max-w-xs text-xs leading-6">{me.description}</p>}
       {me.knows.length > 0 && (
         <div className="mt-1 flex flex-wrap justify-center gap-1">
           {me.knows.map((k) => (
@@ -157,7 +212,7 @@ function Grid({ words, highlight }: { words: string[]; highlight: string | null 
         <div
           key={w}
           className={cn(
-            'grid min-h-12 place-items-center rounded-xl bg-surface-2 p-1 text-center text-xs font-bold',
+            'bg-surface-2 grid min-h-12 place-items-center rounded-xl p-1 text-center text-xs font-bold',
             highlight === w && 'bg-accent text-accent-ink',
           )}
         >
@@ -220,14 +275,21 @@ export function HiddenWordPlay({ view, dispatch, me, isHost, now, mode }: PlayPr
         {header}
         {lastOut}
         {view.endsAt ? (
-          <Timer endsAt={view.endsAt} total={Math.max(1, Math.round((view.endsAt - now()) / 1000))} now={now} onTick={(s) => s <= 10 && s > 0 && play('tick')} />
+          <Timer
+            endsAt={view.endsAt}
+            total={Math.max(1, Math.round((view.endsAt - now()) / 1000))}
+            now={now}
+            onTick={(s) => s <= 10 && s > 0 && play('tick')}
+          />
         ) : (
-          <Card className="text-center text-muted">{t('hw.noTimerDiscuss')}</Card>
+          <Card className="text-muted text-center">{t('hw.noTimerDiscuss')}</Card>
         )}
         <Card className="text-center">
           <span className="text-muted">{t('hw.firstAsker')}</span>{' '}
           <b className="text-accent">{name(view.firstAsker)}</b>
-          <p className="mt-1 text-xs text-muted">{view.elimination === 'multi' ? t('hw.describeHint') : t('hw.askHint')}</p>
+          <p className="text-muted mt-1 text-xs">
+            {view.elimination === 'multi' ? t('hw.describeHint') : t('hw.askHint')}
+          </p>
         </Card>
         {view.me && (
           <HoldReveal className="h-44" label={t('hw.peekRole')}>
@@ -242,7 +304,12 @@ export function HiddenWordPlay({ view, dispatch, me, isHost, now, mode }: PlayPr
         )}
         <div className="flex flex-col gap-2">
           {view.me?.canDeclareGuess && (
-            <Button variant="danger" size="lg" onClick={() => dispatch({ type: 'declareGuess' })} data-testid="declare-guess">
+            <Button
+              variant="danger"
+              size="lg"
+              onClick={() => dispatch({ type: 'declareGuess' })}
+              data-testid="declare-guess"
+            >
               {t('hw.iKnowIt')}
             </Button>
           )}
@@ -255,7 +322,7 @@ export function HiddenWordPlay({ view, dispatch, me, isHost, now, mode }: PlayPr
         <Sheet open={refOpen} onClose={() => setRefOpen(false)} title={t('hw.referenceTitle')}>
           <div className="grid grid-cols-2 gap-2">
             {view.reference?.map((r) => (
-              <span key={r} className="rounded-xl bg-surface-2 px-3 py-2 text-sm">
+              <span key={r} className="bg-surface-2 rounded-xl px-3 py-2 text-sm">
                 {r}
               </span>
             ))}
@@ -273,7 +340,12 @@ export function HiddenWordPlay({ view, dispatch, me, isHost, now, mode }: PlayPr
           {header}
           <h2 className="text-xl font-black">{t('hw.whoWasVoted')}</h2>
           <PlayerPicker players={alivePlayers} value={pick} onChange={setPick} />
-          <Button size="lg" disabled={!pick} onClick={() => pick && (dispatch({ type: 'hostEliminate', target: pick }), setPick(null))} data-testid="confirm-vote">
+          <Button
+            size="lg"
+            disabled={!pick}
+            onClick={() => pick && (dispatch({ type: 'hostEliminate', target: pick }), setPick(null))}
+            data-testid="confirm-vote"
+          >
             {t('hw.eliminate')}
           </Button>
         </div>
@@ -313,7 +385,8 @@ export function HiddenWordPlay({ view, dispatch, me, isHost, now, mode }: PlayPr
   }
 
   if (view.phase === 'guess' && view.guess) {
-    if (!view.guess.mine) return <Notice tone="warn">{t('hw.isGuessing', { name: name(view.guess.guesser) })}</Notice>;
+    if (!view.guess.mine)
+      return <Notice tone="warn">{t('hw.isGuessing', { name: name(view.guess.guesser) })}</Notice>;
     return (
       <div className="flex flex-col gap-3">
         {lastOut}
@@ -327,7 +400,12 @@ export function HiddenWordPlay({ view, dispatch, me, isHost, now, mode }: PlayPr
             ))}
           </div>
         ) : (
-          <TextField value={guessText} onChange={(e) => setGuessText(e.target.value)} placeholder={t('hw.typeGuess')} data-testid="guess-input" />
+          <TextField
+            value={guessText}
+            onChange={(e) => setGuessText(e.target.value)}
+            placeholder={t('hw.typeGuess')}
+            data-testid="guess-input"
+          />
         )}
         <Button
           size="lg"
@@ -342,12 +420,17 @@ export function HiddenWordPlay({ view, dispatch, me, isHost, now, mode }: PlayPr
   }
 
   if (view.phase === 'witness' && view.witness) {
-    if (!view.witness.mine) return <Notice tone="warn">{t('hw.findingWitness', { name: name(view.witness.guesser) })}</Notice>;
+    if (!view.witness.mine)
+      return <Notice tone="warn">{t('hw.findingWitness', { name: name(view.witness.guesser) })}</Notice>;
     return (
       <div className="flex flex-col gap-3">
         <h2 className="text-xl font-black">{t('hw.whoIsWitness')}</h2>
         <PlayerPicker players={view.players.filter((p) => p.id !== me)} value={pick} onChange={setPick} />
-        <Button size="lg" disabled={!pick} onClick={() => pick && dispatch({ type: 'witnessGuess', target: pick })}>
+        <Button
+          size="lg"
+          disabled={!pick}
+          onClick={() => pick && dispatch({ type: 'witnessGuess', target: pick })}
+        >
           {t('common.confirm')}
         </Button>
       </div>
@@ -357,7 +440,15 @@ export function HiddenWordPlay({ view, dispatch, me, isHost, now, mode }: PlayPr
   return <Notice>{t('common.loading')}</Notice>;
 }
 
-function Tally({ tally, name, num }: { tally: Record<string, number>; name: (id: string) => string; num: (n: number) => string }) {
+function Tally({
+  tally,
+  name,
+  num,
+}: {
+  tally: Record<string, number>;
+  name: (id: string) => string;
+  num: (n: number) => string;
+}) {
   const max = Math.max(1, ...Object.values(tally));
   return (
     <Card className="flex flex-col gap-2">
@@ -366,7 +457,7 @@ function Tally({ tally, name, num }: { tally: Record<string, number>; name: (id:
         .map(([id, n]) => (
           <div key={id} className="flex items-center gap-2 text-sm">
             <span className="w-24 truncate">{name(id)}</span>
-            <span className="h-3 rounded-full bg-accent" style={{ width: `${(n / max) * 60}%` }} />
+            <span className="bg-accent h-3 rounded-full" style={{ width: `${(n / max) * 60}%` }} />
             <span>{num(n)}</span>
           </div>
         ))}

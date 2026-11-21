@@ -41,9 +41,21 @@ for (const g of GAMES) {
     await pickGame(page, g.family, g.id);
     await page.getByTestId('local-start').click();
     await expect(page).toHaveURL(/#\/local\/play/);
-    if (await page.getByTestId('handoff-ready').isVisible().catch(() => false)) await page.getByTestId('handoff-ready').click();
+    if (
+      await page
+        .getByTestId('handoff-ready')
+        .isVisible()
+        .catch(() => false)
+    )
+      await page.getByTestId('handoff-ready').click();
     if (g.step) await g.step(page);
-    if (await page.getByTestId('handoff-ready').isVisible().catch(() => false)) await page.getByTestId('handoff-ready').click();
+    if (
+      await page
+        .getByTestId('handoff-ready')
+        .isVisible()
+        .catch(() => false)
+    )
+      await page.getByTestId('handoff-ready').click();
     await expect(page.locator('main')).not.toBeEmpty();
     await shot(page, `game-${g.id}`);
     expect(errors).toEqual([]);

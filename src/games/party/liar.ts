@@ -155,11 +155,26 @@ export const liar: GameModule<LiarConfig, LiarState, LiarAction, LiarView> = {
       myLie: viewer === 'public' ? null : (s.lies[viewer] ?? null),
       options:
         s.phase === 'pick'
-          ? s.options.map((o, index) => ({ index, text: o.text, mine: viewer !== 'public' && o.authors.includes(viewer) })).filter((o) => !o.mine).map(({ index, text }) => ({ index, text }))
+          ? s.options
+              .map((o, index) => ({
+                index,
+                text: o.text,
+                mine: viewer !== 'public' && o.authors.includes(viewer),
+              }))
+              .filter((o) => !o.mine)
+              .map(({ index, text }) => ({ index, text }))
           : null,
       picked: Object.keys(s.picks),
       myPick: viewer === 'public' ? null : (s.picks[viewer] ?? null),
-      reveal: reveal && s.options.length ? s.options.map((o, i) => ({ text: o.text, truth: o.authors.length === 0, authors: o.authors, pickedBy: Object.keys(s.picks).filter((p) => s.picks[p] === i) })) : null,
+      reveal:
+        reveal && s.options.length
+          ? s.options.map((o, i) => ({
+              text: o.text,
+              truth: o.authors.length === 0,
+              authors: o.authors,
+              pickedBy: Object.keys(s.picks).filter((p) => s.picks[p] === i),
+            }))
+          : null,
       scores: s.scores,
       lastGain: s.lastGain,
     };
@@ -181,6 +196,7 @@ export const liar: GameModule<LiarConfig, LiarState, LiarAction, LiarView> = {
     if (s.phase === 'pick') return s.players.map((p) => p.id).filter((p) => s.picks[p] == null);
     return [];
   },
-  validate: (_c, n) => (n < 3 ? { k: 'err.minPlayers', p: { n: 3 } } : n > 10 ? { k: 'err.maxPlayers', p: { n: 10 } } : null),
+  validate: (_c, n) =>
+    n < 3 ? { k: 'err.minPlayers', p: { n: 3 } } : n > 10 ? { k: 'err.maxPlayers', p: { n: 10 } } : null,
   screens: { Setup: LiarSetup, Play: LiarPlay },
 };

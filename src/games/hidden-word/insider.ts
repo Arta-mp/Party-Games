@@ -53,7 +53,12 @@ export interface InsiderView {
   myVote: PlayerId | null;
   me: { role: 'guide' | 'insider' | 'common'; word: string | null } | null;
   /** the guide always sees it on the public screen in pass & play (they are the moderator) */
-  outcome: { kind: NonNullable<InsiderState['outcome']>; insider: PlayerId; word: string; tally: Record<PlayerId, number> | null } | null;
+  outcome: {
+    kind: NonNullable<InsiderState['outcome']>;
+    insider: PlayerId;
+    word: string;
+    tally: Record<PlayerId, number> | null;
+  } | null;
   /** word revealed after it is found */
   word: string | null;
 }
@@ -111,7 +116,8 @@ export const insider: GameModule<InsiderConfig, InsiderState, InsiderAction, Ins
         }
         return state;
       case 'found':
-        if (s.phase !== 'search' || !canModerate(s, actor) || !s.players.some((p) => p.id === action.finder)) return state;
+        if (s.phase !== 'search' || !canModerate(s, actor) || !s.players.some((p) => p.id === action.finder))
+          return state;
         if (action.finder === s.guide) return state;
         s.finder = action.finder;
         s.phase = 'discuss';
@@ -140,7 +146,8 @@ export const insider: GameModule<InsiderConfig, InsiderState, InsiderAction, Ins
     }
   },
   viewFor(s, viewer) {
-    const role = viewer === 'public' ? null : viewer === s.guide ? 'guide' : viewer === s.insider ? 'insider' : 'common';
+    const role =
+      viewer === 'public' ? null : viewer === s.guide ? 'guide' : viewer === s.insider ? 'insider' : 'common';
     return {
       phase: s.phase,
       players: s.players,
@@ -152,13 +159,21 @@ export const insider: GameModule<InsiderConfig, InsiderState, InsiderAction, Ins
       myVote: viewer === 'public' ? null : (s.votes[viewer] ?? null),
       me: role ? { role, word: role === 'common' ? null : s.word } : null,
       word: s.finder || s.phase === 'over' ? s.word : null,
-      outcome: s.phase === 'over' && s.outcome ? { kind: s.outcome, insider: s.insider, word: s.word, tally: s.tally } : null,
+      outcome:
+        s.phase === 'over' && s.outcome
+          ? { kind: s.outcome, insider: s.insider, word: s.word, tally: s.tally }
+          : null,
     };
   },
   result(s) {
     if (s.phase !== 'over' || !s.outcome) return null;
     const all = s.players.map((p) => p.id);
-    const winners = s.outcome === 'notFound' ? [] : s.outcome === 'caught' ? all.filter((id) => id !== s.insider) : [s.insider];
+    const winners =
+      s.outcome === 'notFound'
+        ? []
+        : s.outcome === 'caught'
+          ? all.filter((id) => id !== s.insider)
+          : [s.insider];
     const scores: Record<PlayerId, number> = {};
     for (const w of winners) scores[w] = s.outcome === 'escaped' ? 3 : 1;
     return {
@@ -179,6 +194,7 @@ export const insider: GameModule<InsiderConfig, InsiderState, InsiderAction, Ins
     return [];
   },
   deadline: (s) => (s.phase === 'search' || s.phase === 'discuss' ? s.endsAt : null),
-  validate: (_c, n) => (n < 4 ? { k: 'err.minPlayers', p: { n: 4 } } : n > 8 ? { k: 'err.maxPlayers', p: { n: 8 } } : null),
+  validate: (_c, n) =>
+    n < 4 ? { k: 'err.minPlayers', p: { n: 4 } } : n > 8 ? { k: 'err.maxPlayers', p: { n: 8 } } : null,
   screens: { Setup: InsiderSetup, Play: InsiderPlay },
 };

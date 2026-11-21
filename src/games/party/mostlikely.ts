@@ -56,7 +56,8 @@ function doReveal(s: MLState) {
   s.tally = t;
   const max = Math.max(0, ...Object.values(t));
   const top = Object.keys(t).filter((k) => t[k] === max);
-  for (const [voter, target] of Object.entries(s.votes)) if (top.includes(target)) s.points[voter] = (s.points[voter] ?? 0) + 1;
+  for (const [voter, target] of Object.entries(s.votes))
+    if (top.includes(target)) s.points[voter] = (s.points[voter] ?? 0) + 1;
   s.history.push({ q: s.questions[s.index]!, top });
   s.phase = 'reveal';
 }
@@ -69,7 +70,9 @@ export const mostLikely: GameModule<MLConfig, MLState, MLAction, MLView> = {
   actionSchema: mlAction,
   defaultConfig: mlConfig.parse({}),
   setup(players, cfg, rng, opts) {
-    const qs = itemsOf('questions', cfg.packs).filter((q) => !q.type).map((q) => q.q);
+    const qs = itemsOf('questions', cfg.packs)
+      .filter((q) => !q.type)
+      .map((q) => q.q);
     return {
       local: opts.local,
       hostId: opts.hostId,
@@ -88,7 +91,8 @@ export const mostLikely: GameModule<MLConfig, MLState, MLAction, MLView> = {
     const s = clone(state);
     switch (action.type) {
       case 'vote':
-        if (s.phase !== 'vote' || s.votes[actor] || !s.players.some((p) => p.id === action.target)) return state;
+        if (s.phase !== 'vote' || s.votes[actor] || !s.players.some((p) => p.id === action.target))
+          return state;
         if (!s.cfg.allowSelf && action.target === actor) return state;
         s.votes[actor] = action.target;
         if (s.players.every((p) => s.votes[p.id])) doReveal(s);
@@ -109,7 +113,9 @@ export const mostLikely: GameModule<MLConfig, MLState, MLAction, MLView> = {
     }
   },
   viewFor(s, viewer) {
-    const top = s.tally ? Object.keys(s.tally).filter((k) => s.tally![k] === Math.max(...Object.values(s.tally!))) : [];
+    const top = s.tally
+      ? Object.keys(s.tally).filter((k) => s.tally![k] === Math.max(...Object.values(s.tally!)))
+      : [];
     return {
       phase: s.phase,
       question: s.questions[Math.min(s.index, s.questions.length - 1)] ?? '',
@@ -131,7 +137,10 @@ export const mostLikely: GameModule<MLConfig, MLState, MLAction, MLView> = {
     return {
       winners,
       title: { k: 'ml.result' },
-      lines: s.history.slice(-3).map((h) => ({ k: 'ml.historyLine', p: { q: h.q, names: h.top.map((id) => s.players.find((p) => p.id === id)?.name ?? '').join('، ') } })),
+      lines: s.history.slice(-3).map((h) => ({
+        k: 'ml.historyLine',
+        p: { q: h.q, names: h.top.map((id) => s.players.find((p) => p.id === id)?.name ?? '').join('، ') },
+      })),
       scores: Object.fromEntries(winners.map((w) => [w, 2])),
       reveal: s.players.map((p) => ({ playerId: p.id, label: `${s.points[p.id] ?? 0}` })),
       highlights: winners.map((w) => ({ key: 'mvp', playerId: w })),

@@ -33,8 +33,16 @@ test('role editor: build a custom night role step by step and see it in mafia se
 
 test('share link imports a role (validated, no install needed)', async ({ page }) => {
   await asUser(page, 'آرتا');
-  const role = { id: 'oracle', nameFa: 'غیب‌گو', emoji: '🔮', team: 'citizens', night: { action: 'reveal', target: 'other', uses: 1 } };
-  const code = LZString.compressToEncodedURIComponent(JSON.stringify({ v: 1, kind: 'ability-role', data: role }));
+  const role = {
+    id: 'oracle',
+    nameFa: 'غیب‌گو',
+    emoji: '🔮',
+    team: 'citizens',
+    night: { action: 'reveal', target: 'other', uses: 1 },
+  };
+  const code = LZString.compressToEncodedURIComponent(
+    JSON.stringify({ v: 1, kind: 'ability-role', data: role }),
+  );
   await page.goto(`./#/import/${code}`);
   await expect(page.getByTestId('role-preview')).toContainText('غیب‌گو');
   await page.getByTestId('import-save').click();

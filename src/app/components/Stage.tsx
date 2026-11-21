@@ -154,7 +154,15 @@ export function OnlineStage({
   if (!view) return <Notice>{t('common.loading')}</Notice>;
   return (
     <div className="flex flex-col gap-3">
-      <Play view={view as never} dispatch={dispatch} me={me} isHost={isHost} players={players} mode="online" now={stableNow} />
+      <Play
+        view={view as never}
+        dispatch={dispatch}
+        me={me}
+        isHost={isHost}
+        players={players}
+        mode="online"
+        now={stableNow}
+      />
     </div>
   );
 }

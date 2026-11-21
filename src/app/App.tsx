@@ -39,20 +39,78 @@ function Shell() {
     root.dataset.theme = theme;
     root.lang = lang;
     root.dir = lang === 'fa' ? 'rtl' : 'ltr';
-    document.querySelector('meta[name=theme-color]')?.setAttribute('content', theme === 'dark' ? '#12101a' : '#f7f5fb');
+    document
+      .querySelector('meta[name=theme-color]')
+      ?.setAttribute('content', theme === 'dark' ? '#12101a' : '#f7f5fb');
   }, [theme, lang]);
   return (
-    <Suspense fallback={<div className="grid min-h-dvh place-items-center text-muted">…</div>}>
+    <Suspense fallback={<div className="text-muted grid min-h-dvh place-items-center">…</div>}>
       <Routes>
         <Route path="/name" element={<NamePage />} />
-        <Route path="/" element={<RequireName><Home /></RequireName>} />
-        <Route path="/join/:code" element={<RequireName><JoinPage /></RequireName>} />
-        <Route path="/lobby/:code" element={<RequireName><LobbyPage /></RequireName>} />
-        <Route path="/local" element={<RequireName><LocalSetup /></RequireName>} />
-        <Route path="/local/play" element={<RequireName><LocalPlay /></RequireName>} />
-        <Route path="/settings" element={<RequireName><SettingsPage /></RequireName>} />
-        <Route path="/custom" element={<RequireName><CustomPage /></RequireName>} />
-        <Route path="/import/:data" element={<RequireName><ImportPage /></RequireName>} />
+        <Route
+          path="/"
+          element={
+            <RequireName>
+              <Home />
+            </RequireName>
+          }
+        />
+        <Route
+          path="/join/:code"
+          element={
+            <RequireName>
+              <JoinPage />
+            </RequireName>
+          }
+        />
+        <Route
+          path="/lobby/:code"
+          element={
+            <RequireName>
+              <LobbyPage />
+            </RequireName>
+          }
+        />
+        <Route
+          path="/local"
+          element={
+            <RequireName>
+              <LocalSetup />
+            </RequireName>
+          }
+        />
+        <Route
+          path="/local/play"
+          element={
+            <RequireName>
+              <LocalPlay />
+            </RequireName>
+          }
+        />
+        <Route
+          path="/settings"
+          element={
+            <RequireName>
+              <SettingsPage />
+            </RequireName>
+          }
+        />
+        <Route
+          path="/custom"
+          element={
+            <RequireName>
+              <CustomPage />
+            </RequireName>
+          }
+        />
+        <Route
+          path="/import/:data"
+          element={
+            <RequireName>
+              <ImportPage />
+            </RequireName>
+          }
+        />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Suspense>

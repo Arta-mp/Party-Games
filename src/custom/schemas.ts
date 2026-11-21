@@ -15,14 +15,31 @@ export const infoRoleSchema = z.object({
   onEliminated: z.enum(['none', 'guessSecret', 'spyGuessesWitness']).default('none'),
   /** false → the player isn't told their role (e.g. the infiltrator thinks they're a citizen) */
   selfAware: z.boolean().default(true),
-  count: z.object({ min: z.number().int().min(0).max(16), max: z.number().int().min(0).max(16) }).default({ min: 0, max: 1 }),
+  count: z
+    .object({ min: z.number().int().min(0).max(16), max: z.number().int().min(0).max(16) })
+    .default({ min: 0, max: 1 }),
   descriptionFa: z.string().max(200).default(''),
 });
 export type InfoRole = z.infer<typeof infoRoleSchema>;
 
-export const NIGHT_ACTIONS = ['kill', 'protect', 'investigate', 'block', 'silence', 'reveal', 'swap', 'convert'] as const;
+export const NIGHT_ACTIONS = [
+  'kill',
+  'protect',
+  'investigate',
+  'block',
+  'silence',
+  'reveal',
+  'swap',
+  'convert',
+] as const;
 export const TARGETS = ['self', 'other', 'any', 'teammate'] as const;
-export const PASSIVES = ['bulletproof', 'appearsInnocent', 'appearsGuilty', 'revengeKill', 'immuneToBlock'] as const;
+export const PASSIVES = [
+  'bulletproof',
+  'appearsInnocent',
+  'appearsGuilty',
+  'revengeKill',
+  'immuneToBlock',
+] as const;
 export const DEFAULT_PRIORITY: Record<(typeof NIGHT_ACTIONS)[number], number> = {
   block: 10,
   silence: 15,

@@ -30,7 +30,10 @@ describe('board.codewords', () => {
     const op = s().teams[team].find((p) => p !== cap)!;
     const opp = s().teams[team === 'red' ? 'blue' : 'red'][0]!;
     d.noop(op, { type: 'clue', word: 'x', count: 1 });
-    expect(d.runner.dispatch({ type: 'clue', word: s().words[0]!, count: 1 }, cap, d.now)).toEqual({ ok: false, error: 'clue-on-board' });
+    expect(d.runner.dispatch({ type: 'clue', word: s().words[0]!, count: 1 }, cap, d.now)).toEqual({
+      ok: false,
+      error: 'clue-on-board',
+    });
     d.act(cap, { type: 'clue', word: 'سرنخ', count: 1 });
     expect(s().guessesLeft).toBe(2);
     d.noop(opp, { type: 'reveal', index: 0 });
@@ -71,7 +74,7 @@ describe('board.duet', () => {
     expect(b.filter((k) => k === 'A')).toHaveLength(3);
     expect(DUET_CELLS.filter((c) => c[0] === 'G' || c[1] === 'G')).toHaveLength(15);
   });
-  it('each player sees only their own key; guessing uses the giver\'s key', () => {
+  it("each player sees only their own key; guessing uses the giver's key", () => {
     const d = new Driver(duet, makePlayers(2));
     const s = () => d.state as DuetState;
     expect((d.view('p1') as DuetView).myKey).toEqual(s().keys[0]);

@@ -78,7 +78,9 @@ export const truthDare: GameModule<TDConfig, TDState, TDAction, TDView> = {
       case 'choose': {
         if (s.phase !== 'choose' || (actor !== s.current && !s.local)) return state;
         const levels = levelsUpTo(s.cfg.level);
-        const all = itemsOf('questions', s.cfg.packs).filter((q) => q.type === action.kind && levels.includes(q.level ?? 'family'));
+        const all = itemsOf('questions', s.cfg.packs).filter(
+          (q) => q.type === action.kind && levels.includes(q.level ?? 'family'),
+        );
         const fresh = all.filter((q) => !s.used.includes(q.q));
         const pick = ctx.rng.pick(fresh.length ? fresh : all.length ? all : [{ q: '—' }]);
         s.used.push(pick.q);
@@ -89,7 +91,8 @@ export const truthDare: GameModule<TDConfig, TDState, TDAction, TDView> = {
       }
       case 'done': {
         if (s.phase !== 'task' || !(hostOk || actor === s.current)) return state;
-        if (action.ok && s.current) s.points[s.current] = (s.points[s.current] ?? 0) + (s.kind === 'dare' ? 2 : 1);
+        if (action.ok && s.current)
+          s.points[s.current] = (s.points[s.current] ?? 0) + (s.kind === 'dare' ? 2 : 1);
         s.turn++;
         s.kind = null;
         s.prompt = null;

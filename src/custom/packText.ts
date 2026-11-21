@@ -12,9 +12,23 @@ import { packSchema, type Pack, type PackKind } from '@/content/schema';
  *  trivia:    سؤال | جواب
  *  columns:   نام ستون
  */
-export const PACK_KINDS: PackKind[] = ['words', 'locations', 'pairs', 'grids', 'cards', 'spectrums', 'questions', 'trivia', 'columns'];
+export const PACK_KINDS: PackKind[] = [
+  'words',
+  'locations',
+  'pairs',
+  'grids',
+  'cards',
+  'spectrums',
+  'questions',
+  'trivia',
+  'columns',
+];
 
-const split = (s: string, re: RegExp) => s.split(re).map((x) => x.trim()).filter(Boolean);
+const split = (s: string, re: RegExp) =>
+  s
+    .split(re)
+    .map((x) => x.trim())
+    .filter(Boolean);
 const digits = (s: string) => s.replace(/[۰-۹]/g, (d) => String(d.charCodeAt(0) - 0x06f0));
 const list = /[،,]/;
 
@@ -87,15 +101,25 @@ export interface ParseResult {
   errors: { line: number; message: string }[];
 }
 
-export function parsePackText(meta: { id: string; nameFa: string; kind: PackKind }, text: string): ParseResult {
-  const lines = text.split('\n').map((l) => l.trim()).filter((l) => l && !l.startsWith('#'));
+export function parsePackText(
+  meta: { id: string; nameFa: string; kind: PackKind },
+  text: string,
+): ParseResult {
+  const lines = text
+    .split('\n')
+    .map((l) => l.trim())
+    .filter((l) => l && !l.startsWith('#'));
   const items: unknown[] = [];
   const errors: ParseResult['errors'] = [];
   lines.forEach((line, i) => {
     const item = parseLine(meta.kind, line);
     const one = packSchema.safeParse({ ...meta, items: [item] });
     if (one.success) items.push(item);
-    else errors.push({ line: i + 1, message: one.error.issues[0]?.path.slice(2).join('.') + ': ' + (one.error.issues[0]?.message ?? '') });
+    else
+      errors.push({
+        line: i + 1,
+        message: one.error.issues[0]?.path.slice(2).join('.') + ': ' + (one.error.issues[0]?.message ?? ''),
+      });
   });
   const res = packSchema.safeParse({ ...meta, items });
   return { pack: res.success && errors.length === 0 ? res.data : null, errors };

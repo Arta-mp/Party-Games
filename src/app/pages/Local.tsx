@@ -85,7 +85,13 @@ export function LocalSetup() {
             hint={dup ? t('local.dup') : nameErr && nameErr !== 'ok' ? t(`name.err.${nameErr}`) : undefined}
           />
         </div>
-        <Button type="submit" size="lg" className="h-14" disabled={nameErr !== 'ok' || dup} data-testid="local-add">
+        <Button
+          type="submit"
+          size="lg"
+          className="h-14"
+          disabled={nameErr !== 'ok' || dup}
+          data-testid="local-add"
+        >
           +
         </Button>
       </form>
@@ -97,7 +103,12 @@ export function LocalSetup() {
             badges={i === 0 ? <Badge>👑 {t('lobby.host')}</Badge> : undefined}
             trailing={
               i > 0 ? (
-                <Button variant="ghost" size="icon" aria-label={t('common.remove')} onClick={() => local.setNames(names.filter((x) => x !== n))}>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  aria-label={t('common.remove')}
+                  onClick={() => local.setNames(names.filter((x) => x !== n))}
+                >
                   ✕
                 </Button>
               ) : undefined
@@ -110,7 +121,9 @@ export function LocalSetup() {
       {meta ? (
         <Card className="flex items-center gap-3" data-family={meta.family}>
           <span className="text-3xl">{meta.emoji}</span>
-          <b className="flex-1 text-accent" data-testid="selected-game">{t(`game.${meta.id}.name`)}</b>
+          <b className="text-accent flex-1" data-testid="selected-game">
+            {t(`game.${meta.id}.name`)}
+          </b>
           <Button variant="secondary" size="sm" onClick={() => setConfigFor(meta.id)}>
             ⚙️
           </Button>

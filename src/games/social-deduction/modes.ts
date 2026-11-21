@@ -1,9 +1,27 @@
 import type { GameModule } from '@/core/engine/types';
 import { META } from '../meta';
-import { mafiaAction, mafiaConfig, pendingMafia, reduceMafia, resultMafia, setupMafia, validateMafia, viewMafia, type MafiaAction, type MafiaConfig, type MafiaKind, type MafiaState, type MafiaView } from './core';
+import {
+  mafiaAction,
+  mafiaConfig,
+  pendingMafia,
+  reduceMafia,
+  resultMafia,
+  setupMafia,
+  validateMafia,
+  viewMafia,
+  type MafiaAction,
+  type MafiaConfig,
+  type MafiaKind,
+  type MafiaState,
+  type MafiaView,
+} from './core';
 import { MafiaPlay, makeMafiaSetup } from './ui';
 
-function make(kind: MafiaKind, id: keyof typeof META, defaults: Partial<MafiaConfig> = {}): GameModule<MafiaConfig, MafiaState, MafiaAction, MafiaView> {
+function make(
+  kind: MafiaKind,
+  id: keyof typeof META,
+  defaults: Partial<MafiaConfig> = {},
+): GameModule<MafiaConfig, MafiaState, MafiaAction, MafiaView> {
   return {
     id,
     family: 'social-deduction',

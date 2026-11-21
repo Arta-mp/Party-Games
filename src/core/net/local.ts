@@ -55,7 +55,11 @@ export class LocalHub {
 type Ev = 'data' | 'join' | 'leave';
 
 class LocalLink implements RoomLink {
-  private handlers: Record<Ev, Set<(...a: never[]) => void>> = { data: new Set(), join: new Set(), leave: new Set() };
+  private handlers: Record<Ev, Set<(...a: never[]) => void>> = {
+    data: new Set(),
+    join: new Set(),
+    leave: new Set(),
+  };
   constructor(
     public readonly selfId: string,
     private hub: LocalHub,

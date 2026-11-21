@@ -20,7 +20,11 @@ export const cwConfig = z.object({
 export type CWConfig = z.infer<typeof cwConfig>;
 
 export const cwAction = z.discriminatedUnion('type', [
-  z.object({ type: z.literal('clue'), word: z.string().trim().min(1).max(30), count: z.number().int().min(0).max(9) }),
+  z.object({
+    type: z.literal('clue'),
+    word: z.string().trim().min(1).max(30),
+    count: z.number().int().min(0).max(9),
+  }),
   z.object({ type: z.literal('reveal'), index: z.number().int().min(0).max(24) }),
   z.object({ type: z.literal('endTurn') }),
 ]);
@@ -69,7 +73,8 @@ export interface CWView {
 }
 
 const other = (t: 'red' | 'blue') => (t === 'red' ? 'blue' : 'red');
-const teamOf = (s: CWState, p: PlayerId) => (s.teams.red.includes(p) ? 'red' : s.teams.blue.includes(p) ? 'blue' : null);
+const teamOf = (s: CWState, p: PlayerId) =>
+  s.teams.red.includes(p) ? 'red' : s.teams.blue.includes(p) ? 'blue' : null;
 const remaining = (s: CWState, c: 'red' | 'blue') => s.key.filter((k, i) => k === c && !s.revealed[i]).length;
 
 function endTurn(s: CWState, now: number) {
@@ -125,7 +130,8 @@ export const codewords: GameModule<CWConfig, CWState, CWAction, CWView> = {
       case 'clue': {
         if (s.phase !== 'clue' || !(actor === s.captains[s.turn] || s.local)) return state;
         const word = action.word.split(/\s+/)[0]!;
-        if (s.words.some((w, i) => !s.revealed[i] && compactFa(w) === compactFa(word))) throw new GameError('clue-on-board');
+        if (s.words.some((w, i) => !s.revealed[i] && compactFa(w) === compactFa(word)))
+          throw new GameError('clue-on-board');
         s.clue = { word, count: action.count };
         s.history.push({ team: s.turn, word, count: action.count });
         s.guessesLeft = action.count === 0 ? 25 : action.count + 1;
@@ -200,7 +206,10 @@ export const codewords: GameModule<CWConfig, CWState, CWAction, CWView> = {
       title: { k: `cw.result.${s.winner}` },
       lines: [{ k: s.reason! }],
       scores: Object.fromEntries(winners.map((w) => [w, 2])),
-      reveal: s.players.map((p) => ({ playerId: p.id, label: `${teamOf(s, p.id) === 'red' ? '🟥' : '🟦'}${p.id === s.captains.red || p.id === s.captains.blue ? ' 🧠' : ''}` })),
+      reveal: s.players.map((p) => ({
+        playerId: p.id,
+        label: `${teamOf(s, p.id) === 'red' ? '🟥' : '🟦'}${p.id === s.captains.red || p.id === s.captains.blue ? ' 🧠' : ''}`,
+      })),
       highlights: [{ key: 'mvp', playerId: s.captains[s.winner] }],
     };
   },

@@ -18,7 +18,11 @@ export function broadcastLink(roomCode: string): Promise<RoomLink> {
   const selfId = `bc-${Math.random().toString(36).slice(2, 10)}`;
   const ch = new BroadcastChannel(`party-games:${roomCode}`);
   const peers = new Map<string, number>();
-  const on = { data: new Set<(d: unknown, f: string) => void>(), join: new Set<(p: string) => void>(), leave: new Set<(p: string) => void>() };
+  const on = {
+    data: new Set<(d: unknown, f: string) => void>(),
+    join: new Set<(p: string) => void>(),
+    leave: new Set<(p: string) => void>(),
+  };
   const post = (f: Frame) => ch.postMessage(f);
   const seen = (id: string) => {
     const isNew = !peers.has(id);

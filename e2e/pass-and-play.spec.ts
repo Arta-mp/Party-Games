@@ -26,7 +26,9 @@ test('pass & play: a full 4-player round of classic spy', async ({ page }) => {
     await expect(page.getByTestId('role-card')).toHaveCount(0);
     await page.getByTestId('ack').click();
   }
-  const spies = Object.entries(roles).filter(([, r]) => r.role === 'جاسوس').map(([n]) => n);
+  const spies = Object.entries(roles)
+    .filter(([, r]) => r.role === 'جاسوس')
+    .map(([n]) => n);
   expect(spies).toHaveLength(1);
   const spy = spies[0]!;
   const location = roles[NAMES.find((n) => n !== spy)!]!.word!;
@@ -50,8 +52,13 @@ test('pass & play: a full 4-player round of classic spy', async ({ page }) => {
   }
 
   // the caught spy gets one guess
-  await expect(page.getByTestId('handoff-name')).toHaveText(spy);
-  await page.getByTestId('handoff-ready').click();
+  // (no extra hand-off if the spy cast the last vote and already holds the phone)
+  await expect(page.getByTestId('handoff-name').or(page.getByTestId('submit-guess'))).toBeVisible();
+  if (await page.getByTestId('handoff-name').isVisible()) {
+    await expect(page.getByTestId('handoff-name')).toHaveText(spy);
+    await page.getByTestId('handoff-ready').click();
+  }
+  await expect(page.getByText(`فقط ${spy} نگاه کند`)).toBeVisible();
   await shot(page, 'pp-06-guess');
   // pick an option that is not the location → citizens win
   const options = page.locator('[data-testid="private-view"] .grid button');

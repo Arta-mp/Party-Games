@@ -16,7 +16,10 @@ for (const [file, size, pad] of out) {
   await page.setContent(
     `<html><body style="margin:0;background:${pad ? '#12101a' : 'transparent'}"><div style="padding:${pad}px;box-sizing:border-box;width:${size}px;height:${size}px">${svg.replace('<svg ', '<svg width="100%" height="100%" ')}</div></body></html>`,
   );
-  writeFileSync(new URL(`../public/${file}`, import.meta.url), await page.screenshot({ omitBackground: !pad }));
+  writeFileSync(
+    new URL(`../public/${file}`, import.meta.url),
+    await page.screenshot({ omitBackground: !pad }),
+  );
 }
 await browser.close();
 console.log('icons written');
