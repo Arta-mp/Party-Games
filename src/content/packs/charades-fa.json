@@ -1,0 +1,447 @@
+{
+ "id": "charades-fa",
+ "kind": "words",
+ "nameFa": "پانتومیم",
+ "items": [
+  {
+   "word": "آتش‌نشان",
+   "category": "شغل",
+   "difficulty": 1
+  },
+  {
+   "word": "آرایشگر",
+   "category": "شغل",
+   "difficulty": 1
+  },
+  {
+   "word": "خلبان",
+   "category": "شغل",
+   "difficulty": 1
+  },
+  {
+   "word": "آشپز",
+   "category": "شغل",
+   "difficulty": 1
+  },
+  {
+   "word": "پلیس",
+   "category": "شغل",
+   "difficulty": 1
+  },
+  {
+   "word": "نقاش",
+   "category": "شغل",
+   "difficulty": 1
+  },
+  {
+   "word": "جراح",
+   "category": "شغل",
+   "difficulty": 2
+  },
+  {
+   "word": "باغبان",
+   "category": "شغل",
+   "difficulty": 2
+  },
+  {
+   "word": "عکاس",
+   "category": "شغل",
+   "difficulty": 2
+  },
+  {
+   "word": "دندانپزشک",
+   "category": "شغل",
+   "difficulty": 2
+  },
+  {
+   "word": "ماهیگیر",
+   "category": "شغل",
+   "difficulty": 2
+  },
+  {
+   "word": "مکانیک",
+   "category": "شغل",
+   "difficulty": 2
+  },
+  {
+   "word": "رهبر ارکستر",
+   "category": "شغل",
+   "difficulty": 3
+  },
+  {
+   "word": "غواص",
+   "category": "شغل",
+   "difficulty": 3
+  },
+  {
+   "word": "زنبوردار",
+   "category": "شغل",
+   "difficulty": 3
+  },
+  {
+   "word": "ستاره‌شناس",
+   "category": "شغل",
+   "difficulty": 3
+  },
+  {
+   "word": "شنا",
+   "category": "ورزش",
+   "difficulty": 1
+  },
+  {
+   "word": "فوتبال",
+   "category": "ورزش",
+   "difficulty": 1
+  },
+  {
+   "word": "بسکتبال",
+   "category": "ورزش",
+   "difficulty": 1
+  },
+  {
+   "word": "دوچرخه‌سواری",
+   "category": "ورزش",
+   "difficulty": 1
+  },
+  {
+   "word": "بوکس",
+   "category": "ورزش",
+   "difficulty": 1
+  },
+  {
+   "word": "تنیس",
+   "category": "ورزش",
+   "difficulty": 2
+  },
+  {
+   "word": "کشتی",
+   "category": "ورزش",
+   "difficulty": 2
+  },
+  {
+   "word": "اسکی",
+   "category": "ورزش",
+   "difficulty": 2
+  },
+  {
+   "word": "وزنه‌برداری",
+   "category": "ورزش",
+   "difficulty": 2
+  },
+  {
+   "word": "بولینگ",
+   "category": "ورزش",
+   "difficulty": 2
+  },
+  {
+   "word": "شمشیربازی",
+   "category": "ورزش",
+   "difficulty": 3
+  },
+  {
+   "word": "کایاک",
+   "category": "ورزش",
+   "difficulty": 3
+  },
+  {
+   "word": "چوگان",
+   "category": "ورزش",
+   "difficulty": 3
+  },
+  {
+   "word": "اسکیت نمایشی",
+   "category": "ورزش",
+   "difficulty": 3
+  },
+  {
+   "word": "پرش با نیزه",
+   "category": "ورزش",
+   "difficulty": 3
+  },
+  {
+   "word": "گربه",
+   "category": "حیوان",
+   "difficulty": 1
+  },
+  {
+   "word": "سگ",
+   "category": "حیوان",
+   "difficulty": 1
+  },
+  {
+   "word": "میمون",
+   "category": "حیوان",
+   "difficulty": 1
+  },
+  {
+   "word": "فیل",
+   "category": "حیوان",
+   "difficulty": 1
+  },
+  {
+   "word": "مار",
+   "category": "حیوان",
+   "difficulty": 1
+  },
+  {
+   "word": "مرغ",
+   "category": "حیوان",
+   "difficulty": 1
+  },
+  {
+   "word": "کانگورو",
+   "category": "حیوان",
+   "difficulty": 2
+  },
+  {
+   "word": "پنگوئن",
+   "category": "حیوان",
+   "difficulty": 2
+  },
+  {
+   "word": "زرافه",
+   "category": "حیوان",
+   "difficulty": 2
+  },
+  {
+   "word": "خرچنگ",
+   "category": "حیوان",
+   "difficulty": 2
+  },
+  {
+   "word": "جغد",
+   "category": "حیوان",
+   "difficulty": 2
+  },
+  {
+   "word": "آفتاب‌پرست",
+   "category": "حیوان",
+   "difficulty": 3
+  },
+  {
+   "word": "اختاپوس",
+   "category": "حیوان",
+   "difficulty": 3
+  },
+  {
+   "word": "طاووس",
+   "category": "حیوان",
+   "difficulty": 3
+  },
+  {
+   "word": "لاک‌پشت دریایی",
+   "category": "حیوان",
+   "difficulty": 3
+  },
+  {
+   "word": "مسواک زدن",
+   "category": "فعالیت روزمره",
+   "difficulty": 1
+  },
+  {
+   "word": "خوابیدن",
+   "category": "فعالیت روزمره",
+   "difficulty": 1
+  },
+  {
+   "word": "دویدن",
+   "category": "فعالیت روزمره",
+   "difficulty": 1
+  },
+  {
+   "word": "آشپزی",
+   "category": "فعالیت روزمره",
+   "difficulty": 1
+  },
+  {
+   "word": "رانندگی",
+   "category": "فعالیت روزمره",
+   "difficulty": 1
+  },
+  {
+   "word": "اتو کشیدن",
+   "category": "فعالیت روزمره",
+   "difficulty": 2
+  },
+  {
+   "word": "جارو زدن",
+   "category": "فعالیت روزمره",
+   "difficulty": 2
+  },
+  {
+   "word": "چای ریختن",
+   "category": "فعالیت روزمره",
+   "difficulty": 2
+  },
+  {
+   "word": "گره زدن کراوات",
+   "category": "فعالیت روزمره",
+   "difficulty": 2
+  },
+  {
+   "word": "سوار شدن مترو در ساعت شلوغی",
+   "category": "فعالیت روزمره",
+   "difficulty": 3
+  },
+  {
+   "word": "پارک دوبل",
+   "category": "فعالیت روزمره",
+   "difficulty": 3
+  },
+  {
+   "word": "بستن چمدان برای سفر",
+   "category": "فعالیت روزمره",
+   "difficulty": 3
+  },
+  {
+   "word": "تایتانیک",
+   "category": "فیلم و سریال",
+   "difficulty": 1
+  },
+  {
+   "word": "شیرشاه",
+   "category": "فیلم و سریال",
+   "difficulty": 1
+  },
+  {
+   "word": "هری پاتر",
+   "category": "فیلم و سریال",
+   "difficulty": 1
+  },
+  {
+   "word": "مرد عنکبوتی",
+   "category": "فیلم و سریال",
+   "difficulty": 2
+  },
+  {
+   "word": "کینگ کونگ",
+   "category": "فیلم و سریال",
+   "difficulty": 2
+  },
+  {
+   "word": "دزدان دریایی کارائیب",
+   "category": "فیلم و سریال",
+   "difficulty": 2
+  },
+  {
+   "word": "ارباب حلقه‌ها",
+   "category": "فیلم و سریال",
+   "difficulty": 3
+  },
+  {
+   "word": "پدرخوانده",
+   "category": "فیلم و سریال",
+   "difficulty": 3
+  },
+  {
+   "word": "جدایی نادر از سیمین",
+   "category": "فیلم و سریال",
+   "difficulty": 3
+  },
+  {
+   "word": "چتر",
+   "category": "اشیا",
+   "difficulty": 1
+  },
+  {
+   "word": "موبایل",
+   "category": "اشیا",
+   "difficulty": 1
+  },
+  {
+   "word": "عینک",
+   "category": "اشیا",
+   "difficulty": 1
+  },
+  {
+   "word": "قیچی",
+   "category": "اشیا",
+   "difficulty": 1
+  },
+  {
+   "word": "ساعت",
+   "category": "اشیا",
+   "difficulty": 1
+  },
+  {
+   "word": "جاروبرقی",
+   "category": "اشیا",
+   "difficulty": 2
+  },
+  {
+   "word": "چرخ خیاطی",
+   "category": "اشیا",
+   "difficulty": 2
+  },
+  {
+   "word": "تلسکوپ",
+   "category": "اشیا",
+   "difficulty": 2
+  },
+  {
+   "word": "منجنیق",
+   "category": "اشیا",
+   "difficulty": 2
+  },
+  {
+   "word": "آسیاب بادی",
+   "category": "اشیا",
+   "difficulty": 3
+  },
+  {
+   "word": "ماشین تحریر",
+   "category": "اشیا",
+   "difficulty": 3
+  },
+  {
+   "word": "جرثقیل",
+   "category": "اشیا",
+   "difficulty": 3
+  },
+  {
+   "word": "ساحل",
+   "category": "مکان",
+   "difficulty": 1
+  },
+  {
+   "word": "مدرسه",
+   "category": "مکان",
+   "difficulty": 1
+  },
+  {
+   "word": "بیمارستان",
+   "category": "مکان",
+   "difficulty": 1
+  },
+  {
+   "word": "شهربازی",
+   "category": "مکان",
+   "difficulty": 2
+  },
+  {
+   "word": "آرایشگاه",
+   "category": "مکان",
+   "difficulty": 2
+  },
+  {
+   "word": "فرودگاه",
+   "category": "مکان",
+   "difficulty": 2
+  },
+  {
+   "word": "آزمایشگاه شیمی",
+   "category": "مکان",
+   "difficulty": 3
+  },
+  {
+   "word": "سالن اپرا",
+   "category": "مکان",
+   "difficulty": 3
+  },
+  {
+   "word": "ایستگاه فضایی",
+   "category": "مکان",
+   "difficulty": 3
+  }
+ ]
+}
