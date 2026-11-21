@@ -106,6 +106,8 @@ export class PeerTransport implements Transport {
 
   private onWire(w: Wire, from: string) {
     if (!w || typeof w !== 'object') return;
+    // opt-in wire log for secrecy tests (window.__pgWireLog = [])
+    (globalThis as { __pgWireLog?: unknown[] }).__pgWireLog?.push({ from, w });
     if (w.$ === 'who') {
       if (this.role === 'host') this.link?.send({ $: 'announce', epoch: this.epoch } satisfies Wire, from);
       return;

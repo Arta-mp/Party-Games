@@ -56,6 +56,22 @@ export function LobbyPage() {
     nav('/');
   };
 
+  if (state && (state.status === 'kicked' || state.status === 'locked' || state.status === 'in-game' || state.status === 'full')) {
+    return (
+      <Screen title={t('app.name')}>
+        <div className="flex flex-1 flex-col items-center justify-center gap-4 text-center">
+          <span className="text-6xl">🚪</span>
+          <h2 className="text-2xl font-black" data-testid="denied">
+            {t(`lobby.denied.${state.status}`)}
+          </h2>
+          <Button size="lg" onClick={leave}>
+            {t('common.home')}
+          </Button>
+        </div>
+      </Screen>
+    );
+  }
+
   if (!state || state.status === 'connecting' || !lobby) {
     const slow = Date.now() - since > 12_000;
     return (
@@ -67,22 +83,6 @@ export function LobbyPage() {
           {slow && <Notice tone="info">{t('lobby.connectTroubleshoot')}</Notice>}
           <Button variant="secondary" onClick={() => nav('/settings')}>
             ⚙️ {t('settings.network')}
-          </Button>
-        </div>
-      </Screen>
-    );
-  }
-
-  if (state.status === 'kicked' || state.status === 'locked' || state.status === 'in-game' || state.status === 'full') {
-    return (
-      <Screen title={t('app.name')}>
-        <div className="flex flex-1 flex-col items-center justify-center gap-4 text-center">
-          <span className="text-6xl">🚪</span>
-          <h2 className="text-2xl font-black" data-testid="denied">
-            {t(`lobby.denied.${state.status}`)}
-          </h2>
-          <Button size="lg" onClick={leave}>
-            {t('common.home')}
           </Button>
         </div>
       </Screen>
