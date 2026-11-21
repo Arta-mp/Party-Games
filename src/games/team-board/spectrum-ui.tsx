@@ -2,20 +2,48 @@ import { useEffect, useRef, useState } from 'react';
 import type { PlayProps, SetupProps } from '@/core/engine/types';
 import { PackPicker } from '@/custom/PackPicker';
 import { useNum, useT } from '@/i18n';
-import { Badge, Button, Card, Notice, Stepper, TextField } from '@/ui/kit';
+import { Badge, Button, Card, Notice, Segmented, Stepper, TextField } from '@/ui/kit';
 import type { SpecAction, SpecConfig, SpecView } from './spectrum';
+
+const BEST_KEY = 'pg:spectrum-best';
+/** co-op high score lives on this device only (a per-viewer convenience) */
+function readBest(): number {
+  try {
+    return Number(localStorage.getItem(BEST_KEY)) || 0;
+  } catch {
+    return 0;
+  }
+}
+function writeBest(n: number) {
+  try {
+    localStorage.setItem(BEST_KEY, String(n));
+  } catch {
+    /* storage blocked */
+  }
+}
 
 export function SpectrumSetup({ config, onChange }: SetupProps<SpecConfig>) {
   const t = useT();
   return (
     <div className="flex flex-col gap-3">
-      <Stepper
-        label={t('spec.cfg.target')}
-        value={config.target}
-        min={3}
-        max={20}
-        onChange={(target) => onChange({ ...config, target })}
+      <Segmented
+        label={t('spec.cfg.mode')}
+        value={config.mode}
+        onChange={(mode) => onChange({ ...config, mode })}
+        options={[
+          { value: 'teams', label: t('spec.mode.teams') },
+          { value: 'coop', label: t('spec.mode.coop') },
+        ]}
       />
+      {config.mode === 'teams' && (
+        <Stepper
+          label={t('spec.cfg.target')}
+          value={config.target}
+          min={3}
+          max={20}
+          onChange={(target) => onChange({ ...config, target })}
+        />
+      )}
       <Stepper
         label={t('spec.cfg.rounds')}
         value={config.maxRounds}
@@ -108,7 +136,19 @@ export function SpectrumPlay({ view, dispatch, me, isHost }: PlayProps<SpecView,
     if (timer.current) clearTimeout(timer.current);
     timer.current = setTimeout(() => dispatch({ type: 'dial', value: v }), 120); // throttle the shared slider
   };
-  const scores = (
+  const best = readBest();
+  if (view.coop && view.phase === 'over' && view.scores[0]! > best) writeBest(view.scores[0]!);
+  const scores = view.coop ? (
+    <Card className="flex items-center justify-between p-3" data-testid="coop-score">
+      <span className="flex flex-col">
+        <b>{t('spec.coopScore', { n: view.scores[0] ?? 0, max: view.maxRounds * 4 })}</b>
+        <span className="text-muted text-xs">
+          {t('spec.coopRound', { n: Math.min(view.round + 1, view.maxRounds), total: view.maxRounds })}
+        </span>
+      </span>
+      {best > 0 && <Badge>🏆 {t('spec.best', { n: best })}</Badge>}
+    </Card>
+  ) : (
     <div className="grid grid-cols-2 gap-2">
       {view.teams.map((team, i) => (
         <Card key={i} className={`p-3 ${i === view.activeTeam ? 'ring-accent ring-2' : ''}`}>

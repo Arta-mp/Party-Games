@@ -479,3 +479,12 @@ describe('spy.insider', () => {
     expect(d.result()!.winners).toEqual([]);
   });
 });
+
+describe('secret source groups', () => {
+  it('never list the same word twice in a category', async () => {
+    const { secretGroups } = await import('./sources');
+    for (const g of secretGroups({})) expect(new Set(g.words).size).toBe(g.words.length);
+    for (const g of secretGroups({ wordPacks: { builtin: ['topics-fa', 'charades-fa'], custom: [] } }))
+      expect(new Set(g.words).size).toBe(g.words.length);
+  });
+});

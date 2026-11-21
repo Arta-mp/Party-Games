@@ -14,7 +14,7 @@ const sel = (kind: Parameters<typeof itemsOf>[0]) =>
 // ------------------------------------------------------------ secret sources
 const sourcesCfg = {
   packs: sel('locations'),
-  wordPacks: packSelection.default({ builtin: [], custom: [] }),
+  wordPacks: packSelection.default({ builtin: ['topics-fa'], custom: [] }),
   /** which categories the secret is drawn from; empty = all (locations + every word category) */
   sources: z.array(z.string()).default([]),
   /** with mixed categories the spy is told the drawn category (otherwise they only know nothing) */

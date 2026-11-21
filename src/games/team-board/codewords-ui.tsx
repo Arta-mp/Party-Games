@@ -8,11 +8,80 @@ import { Badge, Button, Card, Notice, Stepper, TextField, Timer } from '@/ui/kit
 import { WordGrid } from './board-ui';
 import type { CWAction, CWConfig, CWView } from './codewords';
 
-export function CodewordsSetup({ config, onChange }: SetupProps<CWConfig>) {
+export function CodewordsSetup({ config, onChange, players }: SetupProps<CWConfig>) {
   const t = useT();
   const num = useNum();
+  const setTeam = (id: string, team: number) => {
+    const manualTeams = { ...config.manualTeams };
+    if (team < 0) delete manualTeams[id];
+    else manualTeams[id] = team;
+    // a captain moved to the other team is no longer that team's captain
+    const captains = { ...config.captains };
+    if (captains.red === id && team !== 0) delete captains.red;
+    if (captains.blue === id && team !== 1) delete captains.blue;
+    onChange({ ...config, manualTeams, captains });
+  };
+  const toggleCaptain = (id: string, team: 'red' | 'blue') =>
+    onChange({
+      ...config,
+      captains: { ...config.captains, [team]: config.captains[team] === id ? undefined : id },
+    });
   return (
     <div className="flex flex-col gap-3">
+      {players && players.length > 0 && (
+        <div className="flex flex-col gap-2" data-testid="cw-teams">
+          <span className="text-muted text-sm font-bold">{t('cw.cfg.teams')}</span>
+          {players.map((p) => {
+            const team = config.manualTeams[p.id] ?? -1;
+            const color = team === 0 ? 'red' : team === 1 ? 'blue' : null;
+            return (
+              <div key={p.id} className="flex items-center gap-2">
+                <span className="min-w-0 flex-1 truncate font-bold">{p.name}</span>
+                <div className="bg-surface-2 flex gap-1 rounded-xl p-1" role="radiogroup" aria-label={p.name}>
+                  {[-1, 0, 1].map((ti) => (
+                    <button
+                      key={ti}
+                      type="button"
+                      role="radio"
+                      aria-checked={team === ti}
+                      data-testid={`cw-team-${p.name}-${ti}`}
+                      onClick={() => setTeam(p.id, ti)}
+                      className={cn(
+                        'h-10 min-w-10 rounded-lg px-2 text-sm',
+                        team === ti &&
+                          (ti === 0
+                            ? 'bg-team-a text-white'
+                            : ti === 1
+                              ? 'bg-team-b text-white'
+                              : 'bg-border'),
+                      )}
+                    >
+                      {ti < 0 ? '🎲' : ti === 0 ? '🟥' : '🟦'}
+                    </button>
+                  ))}
+                </div>
+                <button
+                  type="button"
+                  disabled={!color}
+                  aria-pressed={!!color && config.captains[color] === p.id}
+                  aria-label={t('cw.captain')}
+                  data-testid={`cw-captain-${p.name}`}
+                  onClick={() => color && toggleCaptain(p.id, color)}
+                  className={cn(
+                    'size-10 rounded-lg text-lg disabled:opacity-25',
+                    color && config.captains[color] === p.id
+                      ? 'bg-accent/30 ring-accent ring-2'
+                      : 'bg-surface-2',
+                  )}
+                >
+                  🧠
+                </button>
+              </div>
+            );
+          })}
+          <span className="text-muted text-xs">{t('cw.cfg.teamsHint')}</span>
+        </div>
+      )}
       <Stepper
         label={t('cw.cfg.turn')}
         value={config.turnSeconds}

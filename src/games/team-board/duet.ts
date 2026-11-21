@@ -22,8 +22,11 @@ export const DUET_CELLS: [K, K][] = [
   ...Array<[K, K]>(7).fill(['N', 'N']),
 ];
 
+export const DUET_TURNS = { easy: 11, normal: 9, hard: 7 } as const;
+
 export const duetConfig = z.object({
-  turns: z.number().int().min(5).max(15).default(9),
+  /** easy = 11 turns, normal = 9, hard = 7 */
+  difficulty: z.enum(['easy', 'normal', 'hard']).default('normal'),
   packs: packSelection.default({ builtin: ['codewords-fa'], custom: [] }),
 });
 export type DuetConfig = z.infer<typeof duetConfig>;
@@ -108,7 +111,7 @@ export const duet: GameModule<DuetConfig, DuetState, DuetAction, DuetView> = {
       giver: 0,
       phase: 'clue',
       clue: null,
-      turnsLeft: cfg.turns,
+      turnsLeft: DUET_TURNS[cfg.difficulty],
       outcome: null,
     };
   },

@@ -4,6 +4,7 @@ import { packSelection } from '@/content/schema';
 import { clone, GameError, type GameModule, type Player, type PlayerId } from '@/core/engine/types';
 import { compactFa } from '@/lib/normalize';
 import { META } from '../meta';
+import { makeTeams } from '../word-guess/core';
 import { CodewordsPlay, CodewordsSetup } from './codewords-ui';
 
 /**
@@ -16,6 +17,10 @@ export const cwConfig = z.object({
   /** seconds per guessing turn, 0 = no timer */
   turnSeconds: z.number().int().min(0).max(600).default(0),
   packs: packSelection.default({ builtin: ['codewords-fa'], custom: [] }),
+  /** host's team choice: player id → 0 (red) / 1 (blue); the rest are spread automatically */
+  manualTeams: z.record(z.string(), z.number().int().min(0).max(1)).default({}),
+  /** host's captain choice per team (falls back to a random team member) */
+  captains: z.object({ red: z.string().optional(), blue: z.string().optional() }).default({}),
 });
 export type CWConfig = z.infer<typeof cwConfig>;
 
@@ -94,9 +99,9 @@ export const codewords: GameModule<CWConfig, CWState, CWAction, CWView> = {
   actionSchema: cwAction,
   defaultConfig: cwConfig.parse({}),
   setup(players, cfg, rng, opts) {
-    const ids = rng.shuffle(players.map((p) => p.id));
-    const red = ids.filter((_, i) => i % 2 === 0);
-    const blue = ids.filter((_, i) => i % 2 === 1);
+    const [red, blue] = makeTeams(players, 2, rng, cfg.manualTeams) as [PlayerId[], PlayerId[]];
+    const captainOf = (team: PlayerId[], wanted?: string) =>
+      wanted && team.includes(wanted) ? wanted : rng.pick(team);
     const first: 'red' | 'blue' = rng.chance(0.5) ? 'red' : 'blue';
     const key = rng.shuffle<Color>([
       ...Array<Color>(9).fill(first),
@@ -109,7 +114,7 @@ export const codewords: GameModule<CWConfig, CWState, CWAction, CWView> = {
       hostId: opts.hostId,
       players,
       teams: { red, blue },
-      captains: { red: red[0]!, blue: blue[0]! },
+      captains: { red: captainOf(red, cfg.captains.red), blue: captainOf(blue, cfg.captains.blue) },
       words: rng.sample([...new Set(itemsOf('words', cfg.packs).map((w) => w.word))], 25),
       key,
       revealed: Array(25).fill(false),

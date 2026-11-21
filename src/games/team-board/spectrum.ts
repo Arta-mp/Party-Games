@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { itemsOf } from '@/content/builtin';
 import { packSelection } from '@/content/schema';
-import { clone, type GameModule, type Player, type PlayerId } from '@/core/engine/types';
+import { clone, type GameModule, type GameResult, type Player, type PlayerId } from '@/core/engine/types';
 import { makeTeams } from '../word-guess/core';
 import { META } from '../meta';
 import { SpectrumPlay, SpectrumSetup } from './spectrum-ui';
@@ -11,6 +11,8 @@ import { SpectrumPlay, SpectrumSetup } from './spectrum-ui';
  * a shared dial, the other team bets left/right. 4/3/2 points by distance, +1 for a correct counter-bet.
  */
 export const specConfig = z.object({
+  /** teams = two teams race to the target; coop = everyone together, beat your best score */
+  mode: z.enum(['teams', 'coop']).default('teams'),
   target: z.number().int().min(3).max(20).default(10),
   maxRounds: z.number().int().min(2).max(30).default(12),
   packs: packSelection.default({ builtin: ['spectrums-fa'], custom: [] }),
@@ -56,6 +58,8 @@ export interface SpecView {
   counter: SpecState['counter'];
   scores: number[];
   goal: number;
+  coop: boolean;
+  maxRounds: number;
   round: number;
   myTeam: number;
   last: SpecState['last'];
@@ -86,7 +90,7 @@ export const spectrum: GameModule<SpecConfig, SpecState, SpecAction, SpecView> =
       local: opts.local,
       hostId: opts.hostId,
       players,
-      teams: makeTeams(players, 2, rng),
+      teams: cfg.mode === 'coop' ? [rng.shuffle(players.map((p) => p.id))] : makeTeams(players, 2, rng),
       cfg,
       spectrums: rng.shuffle(itemsOf('spectrums', cfg.packs)),
       round: 0,
@@ -95,7 +99,7 @@ export const spectrum: GameModule<SpecConfig, SpecState, SpecAction, SpecView> =
       clue: null,
       counter: null,
       phase: 'clue',
-      scores: [0, 0],
+      scores: cfg.mode === 'coop' ? [0] : [0, 0],
       last: null,
     };
   },
@@ -113,10 +117,19 @@ export const spectrum: GameModule<SpecConfig, SpecState, SpecAction, SpecView> =
         if (s.phase !== 'dial' || !onTeam) return state;
         s.dial = Math.round(action.value);
         return s;
-      case 'lock':
+      case 'lock': {
         if (s.phase !== 'dial' || !onTeam) return state;
+        if (s.cfg.mode === 'coop') {
+          // no opposing team: score straight away
+          const pts = pointsFor(s.dial, s.target);
+          s.scores[0]! += pts;
+          s.last = { points: pts, counterOk: false };
+          s.phase = 'reveal';
+          return s;
+        }
         s.phase = 'counter';
         return s;
+      }
       case 'counter': {
         if (s.phase !== 'counter' || !(s.local || (teamOf(s, actor) >= 0 && teamOf(s, actor) !== a)))
           return state;
@@ -162,14 +175,24 @@ export const spectrum: GameModule<SpecConfig, SpecState, SpecAction, SpecView> =
       counter: s.counter,
       scores: s.scores,
       goal: s.cfg.target,
+      coop: s.cfg.mode === 'coop',
+      maxRounds: s.cfg.maxRounds,
       round: s.round,
       myTeam: viewer === 'public' ? -1 : teamOf(s, viewer),
       last: s.last,
       local: s.local,
     };
   },
-  result(s) {
+  result(s): GameResult | null {
     if (s.phase !== 'over') return null;
+    if (s.cfg.mode === 'coop') {
+      const max = s.cfg.maxRounds * 4;
+      return {
+        winners: s.scores[0]! * 2 >= max ? s.players.map((p) => p.id) : [],
+        title: { k: 'spec.coopResult', p: { n: s.scores[0]!, max } },
+        scores: Object.fromEntries(s.players.map((p) => [p.id, Math.round(s.scores[0]! / 4)])),
+      };
+    }
     const win = s.scores[0] === s.scores[1] ? -1 : s.scores[0]! > s.scores[1]! ? 0 : 1;
     const winners = win < 0 ? s.players.map((p) => p.id) : s.teams[win]!;
     return {

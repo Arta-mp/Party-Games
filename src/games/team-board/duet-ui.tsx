@@ -2,20 +2,22 @@ import { useState } from 'react';
 import type { PlayProps, SetupProps } from '@/core/engine/types';
 import { PackPicker } from '@/custom/PackPicker';
 import { useNum, useT } from '@/i18n';
-import { Badge, Button, Card, Notice, Stepper, TextField } from '@/ui/kit';
+import { Badge, Button, Card, Notice, Segmented, Stepper, TextField } from '@/ui/kit';
 import { WordGrid, type CellColor } from './board-ui';
-import type { DuetAction, DuetConfig, DuetView } from './duet';
+import { DUET_TURNS, type DuetAction, type DuetConfig, type DuetView } from './duet';
 
 export function DuetSetup({ config, onChange }: SetupProps<DuetConfig>) {
   const t = useT();
   return (
     <div className="flex flex-col gap-3">
-      <Stepper
-        label={t('duet.cfg.turns')}
-        value={config.turns}
-        min={5}
-        max={15}
-        onChange={(turns) => onChange({ ...config, turns })}
+      <Segmented
+        label={t('duet.cfg.difficulty')}
+        value={config.difficulty}
+        onChange={(difficulty) => onChange({ ...config, difficulty })}
+        options={(['easy', 'normal', 'hard'] as const).map((d) => ({
+          value: d,
+          label: t(`duet.diff.${d}`, { n: DUET_TURNS[d] }),
+        }))}
       />
       <PackPicker kind="words" value={config.packs} onChange={(packs) => onChange({ ...config, packs })} />
     </div>

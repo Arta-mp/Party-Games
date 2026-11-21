@@ -23,11 +23,14 @@ export function secretGroups(cfg: { packs?: PackSelection; wordPacks?: PackSelec
     },
   ];
   const byCat = new Map<string, string[]>();
-  for (const w of itemsOf('words', cfg.wordPacks)) {
+  // default to the topics pack: other word packs reuse category names and would add duplicates
+  for (const w of itemsOf('words', cfg.wordPacks ?? { builtin: ['topics-fa'], custom: [] })) {
     if (!w.category) continue;
     byCat.set(w.category, [...(byCat.get(w.category) ?? []), w.word]);
   }
-  for (const [cat, words] of byCat)
+  for (const [cat, list] of byCat) {
+    const words = [...new Set(list)];
     if (words.length >= 4) groups.push({ id: cat, label: cat, words, roles: null });
+  }
   return groups;
 }

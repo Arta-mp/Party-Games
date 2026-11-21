@@ -141,3 +141,64 @@ describe('board.spectrum', () => {
     expect(s().scores).toEqual([3, 1]);
   });
 });
+
+describe('board design options', () => {
+  it('codewords: host-chosen teams and captains are respected', () => {
+    for (let seed = 0; seed < 8; seed++) {
+      const d = new Driver(
+        codewords,
+        makePlayers(6),
+        {
+          ...codewords.defaultConfig,
+          manualTeams: { p1: 0, p2: 0, p3: 1, p4: 1 },
+          captains: { red: 'p2', blue: 'p4' },
+        },
+        { seed },
+      );
+      const s = d.state as CWState;
+      expect(s.teams.red).toEqual(expect.arrayContaining(['p1', 'p2']));
+      expect(s.teams.blue).toEqual(expect.arrayContaining(['p3', 'p4']));
+      expect(s.captains).toEqual({ red: 'p2', blue: 'p4' });
+      expect(s.teams.red.length + s.teams.blue.length).toBe(6);
+    }
+  });
+  it('codewords: a captain not on that team falls back to a random member of the team', () => {
+    const d = new Driver(codewords, makePlayers(4), {
+      ...codewords.defaultConfig,
+      manualTeams: { p1: 0 },
+      captains: { blue: 'p1' },
+    });
+    const s = d.state as CWState;
+    expect(s.teams.blue).toContain(s.captains.blue);
+    expect(s.captains.blue).not.toBe('p1');
+  });
+  it('duet difficulty sets the number of turns', () => {
+    expect(
+      (new Driver(duet, makePlayers(2), { ...duet.defaultConfig, difficulty: 'easy' }).state as DuetState)
+        .turnsLeft,
+    ).toBe(11);
+    expect((new Driver(duet, makePlayers(2)).state as DuetState).turnsLeft).toBe(9);
+    expect(
+      (new Driver(duet, makePlayers(2), { ...duet.defaultConfig, difficulty: 'hard' }).state as DuetState)
+        .turnsLeft,
+    ).toBe(7);
+  });
+  it('spectrum co-op: one team, no counter-bet, fixed rounds, score out of 4 × rounds', () => {
+    const d = new Driver(spectrum, makePlayers(3), { ...spectrum.defaultConfig, mode: 'coop', maxRounds: 2 });
+    const s = () => d.state as SpecState;
+    expect(s().teams).toHaveLength(1);
+    for (let r = 0; r < 2; r++) {
+      const psychic = (d.view('public') as SpecView).psychic;
+      const mate = d.ids().find((p) => p !== psychic)!;
+      d.act(psychic, { type: 'clue', text: 'x' });
+      d.act(mate, { type: 'dial', value: s().target });
+      d.act(mate, { type: 'lock' });
+      expect(s().phase).toBe('reveal');
+      d.act('p1', { type: 'next' });
+    }
+    expect(s().scores).toEqual([8]);
+    const r = d.result()!;
+    expect(r.title).toEqual({ k: 'spec.coopResult', p: { n: 8, max: 8 } });
+    expect(r.winners).toHaveLength(3);
+  });
+});
