@@ -63,7 +63,7 @@ test('pass & play: a full 4-player round of classic spy', async ({ page }) => {
   // pick an option that is not the location → citizens win
   const options = page.locator('[data-testid="private-view"] .grid button');
   const count = await options.count();
-  expect(count).toBeGreaterThan(20);
+  expect(count).toBeGreaterThanOrEqual(4); // every word of the drawn category
   for (let i = 0; i < count; i++) {
     const txt = (await options.nth(i).innerText()).trim();
     if (txt !== location) {

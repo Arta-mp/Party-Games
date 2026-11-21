@@ -37,7 +37,8 @@ export const en: Record<keyof typeof fa, string> = {
   'family.party.desc': 'Everyone answers at once, votes and laughs.',
 
   'game.spy.classic.name': 'Classic Spy',
-  'game.spy.classic.desc': 'Everyone knows the location except the spy. Ask questions and find them.',
+  'game.spy.classic.desc':
+    'Everyone knows the secret except the spy; it comes from locations or categories like food and animals.',
   'game.spy.classic.how1': 'Hold the phone to see the location. One player is the spy and doesn’t know it.',
   'game.spy.classic.how2':
     'Take turns asking each other questions; answers must not give the location away but should prove you know it.',
@@ -62,7 +63,7 @@ export const en: Record<keyof typeof fa, string> = {
   'game.spy.infiltrator.how1': 'See your word. Nobody knows their role — you might be the infiltrator!',
   'game.spy.infiltrator.how2': 'Each player says one sentence about their word. Don’t be too obvious!',
   'game.spy.infiltrator.how3':
-    'Each round one player is voted out until the infiltrators are found or take over.',
+    'Each round one player is voted out. An eliminated infiltrator gets one guess at the citizens’ word to win.',
   'game.spy.blank.name': 'No Word',
   'game.spy.blank.desc': 'Infiltrator variant where one player has no word at all and must bluff.',
   'game.spy.blank.how1': 'The blank player knows they have no word and guesses it from what others say.',
@@ -325,6 +326,10 @@ export const en: Record<keyof typeof fa, string> = {
   'hw.cfg.blanks': 'Blank players',
   'hw.cfg.categories': 'Categories',
   'hw.cfg.categoriesHint': 'None selected means all',
+  'hw.cfg.sources': 'Which categories can the secret come from?',
+  'hw.cfg.sourcesHint': 'Each round one of the enabled categories is drawn at random (all on = all)',
+  'hw.cfg.spySeesCategory': 'The spy knows the category',
+  'hw.cfg.spySeesCategoryHint': 'e.g. knows it is “food” but not which food',
   'hw.seen': 'Got it',
   'hw.seenPass': 'Got it — hide and pass on',
   'hw.waitingOthers': 'Waiting for others… ({n} of {total})',
@@ -358,7 +363,7 @@ export const en: Record<keyof typeof fa, string> = {
   'hw.submitGuess': 'Submit guess',
   'hw.findingWitness': '{name} is hunting for the witness…',
   'hw.whoIsWitness': 'Who is the witness? Find them and you win!',
-  'hw.notice.tie': 'It’s a tie; vote again',
+  'hw.notice.tie': 'It’s a tie; re-vote between the tied players only',
   'hw.notice.tieTwice': 'Tied again!',
   'hw.notice.timeUp': 'Time’s up!',
   'hw.notice.witness': 'The spy gets one chance to find the witness',
@@ -369,7 +374,7 @@ export const en: Record<keyof typeof fa, string> = {
   'hw.reason.caught': 'The spy was caught.',
   'hw.reason.wrongVote': 'An innocent player was eliminated.',
   'hw.reason.tie': 'The group couldn’t decide.',
-  'hw.reason.guessed': 'The spy guessed the secret.',
+  'hw.reason.guessed': 'The secret word was guessed correctly.',
   'hw.reason.wrongGuess': 'The spy guessed wrong.',
   'hw.reason.allFound': 'All infiltrators were found.',
   'hw.reason.outnumber': 'The infiltrators caught up with the citizens.',

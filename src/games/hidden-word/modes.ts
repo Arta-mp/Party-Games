@@ -3,6 +3,7 @@ import type { Rng } from '@/core/engine/rng';
 import { itemsOf } from '@/content/builtin';
 import { packSelection } from '@/content/schema';
 import { META } from '../meta';
+import { LOCATIONS_SOURCE, secretGroups } from './sources';
 import { HiddenWordPlay, makeHiddenWordSetup, type HWPackKind } from './ui';
 import { baseConfig, BLANK, CITIZEN, INFILTRATOR, makeHWModule, SPY, TOPIC_SPY, type Deal } from './core';
 
@@ -10,28 +11,45 @@ const screensFor = (k: HWPackKind) => ({ Setup: makeHiddenWordSetup(k), Play: Hi
 const sel = (kind: Parameters<typeof itemsOf>[0]) =>
   packSelection.default({ builtin: [], custom: [] }).describe(kind);
 
-// ------------------------------------------------------------ جاسوس کلاسیک
-const classicCfg = z.object({ ...baseConfig, packs: sel('locations') });
-type ClassicCfg = z.infer<typeof classicCfg>;
+// ------------------------------------------------------------ secret sources
+const sourcesCfg = {
+  packs: sel('locations'),
+  wordPacks: packSelection.default({ builtin: [], custom: [] }),
+  /** which categories the secret is drawn from; empty = all (locations + every word category) */
+  sources: z.array(z.string()).default([]),
+  /** with mixed categories the spy is told the drawn category (otherwise they only know nothing) */
+  spySeesCategory: z.boolean().default(true),
+};
+type SourcesCfg = z.infer<z.ZodObject<typeof sourcesCfg>>;
 
-function locationDeal(
-  cfg: { packs: ClassicCfg['packs'] },
+function sourcedDeal(
+  cfg: SourcesCfg,
   rng: Rng,
   withRoles: boolean,
   spies: number,
+  knowEachOther: boolean,
 ): Deal {
-  const locations = itemsOf('locations', cfg.packs);
-  const loc = rng.pick(locations);
+  const all = secretGroups(cfg);
+  // the roles variant needs per-secret roles, which only locations have
+  const usable = withRoles ? all.filter((g) => g.roles) : all;
+  const chosen = cfg.sources.length ? usable.filter((g) => cfg.sources.includes(g.id)) : usable;
+  const group = rng.pick(chosen.length ? chosen : usable);
+  const secret = rng.pick(group.words);
+  const spy = { ...(cfg.spySeesCategory ? TOPIC_SPY : SPY), knows: knowEachOther ? ['spy'] : [] };
   return {
-    roles: [{ role: SPY, n: spies }],
-    secret: loc.name,
+    roles: [{ role: spy, n: spies }],
+    secret,
     similar: null,
-    category: null,
+    category: group.label,
     grid: null,
-    guessOptions: locations.map((l) => l.name),
-    subroles: withRoles ? loc.roles : null,
+    guessOptions: group.words,
+    subroles: withRoles ? (group.roles?.[secret] ?? null) : null,
   };
 }
+
+// ------------------------------------------------------------ جاسوس کلاسیک
+const classicCfg = z.object({ ...baseConfig, ...sourcesCfg });
+type ClassicCfg = z.infer<typeof classicCfg>;
 
 export const spyClassic = makeHWModule<ClassicCfg>({
   meta: META['spy.classic'],
@@ -39,25 +57,37 @@ export const spyClassic = makeHWModule<ClassicCfg>({
   defaultConfig: classicCfg.parse({}),
   elimination: 'single',
   spyGuessAnytime: true,
-  deal: (cfg, rng) => locationDeal(cfg, rng, false, 1),
+  deal: (cfg, rng) => sourcedDeal(cfg, rng, false, 1, false),
   screens: screensFor('locations'),
 });
 
-// ------------------------------------------------------------ جاسوس با نقش
-export const spyRoles = makeHWModule<ClassicCfg>({
+// ------------------------------------------------------------ جاسوس با نقش (locations only: roles belong to a place)
+const rolesCfg = z.object({ ...baseConfig, packs: sel('locations') });
+type RolesCfg = z.infer<typeof rolesCfg>;
+
+export const spyRoles = makeHWModule<RolesCfg>({
   meta: META['spy.roles'],
-  configSchema: classicCfg,
-  defaultConfig: classicCfg.parse({}),
+  configSchema: rolesCfg,
+  defaultConfig: rolesCfg.parse({}),
   elimination: 'single',
   spyGuessAnytime: true,
-  deal: (cfg, rng) => locationDeal(cfg, rng, true, 1),
+  deal: (cfg, rng) => {
+    const d = sourcedDeal(
+      { ...cfg, wordPacks: { builtin: [], custom: [] }, sources: [LOCATIONS_SOURCE], spySeesCategory: false },
+      rng,
+      true,
+      1,
+      false,
+    );
+    return { ...d, category: null };
+  },
   screens: screensFor('locations'),
 });
 
 // ------------------------------------------------------------ چند جاسوس
 const multiCfg = z.object({
   ...baseConfig,
-  packs: sel('locations'),
+  ...sourcesCfg,
   spyCount: z.number().int().min(2).max(3).default(2),
   spiesKnowEachOther: z.boolean().default(true),
   withRoles: z.boolean().default(false),
@@ -70,11 +100,7 @@ export const spyMulti = makeHWModule<MultiCfg>({
   defaultConfig: multiCfg.parse({}),
   elimination: 'single',
   spyGuessAnytime: true,
-  deal: (cfg, rng) => {
-    const d = locationDeal(cfg, rng, cfg.withRoles, cfg.spyCount);
-    const spy = { ...SPY, knows: cfg.spiesKnowEachOther ? ['spy'] : [] };
-    return { ...d, roles: [{ role: spy, n: cfg.spyCount }] };
-  },
+  deal: (cfg, rng) => sourcedDeal(cfg, rng, cfg.withRoles, cfg.spyCount, cfg.spiesKnowEachOther),
   screens: screensFor('locations'),
 });
 

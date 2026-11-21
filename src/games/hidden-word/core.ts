@@ -53,8 +53,10 @@ export const INFILTRATOR: InfoRole = infoRoleSchema.parse({
   team: 'spies',
   sees: 'similar',
   selfAware: false,
+  onEliminated: 'guessSecret',
   count: { min: 1, max: 3 },
-  descriptionFa: 'کلمه‌ای شبیه کلمه‌ی بقیه داری و خودت خبر نداری.',
+  descriptionFa:
+    'کلمه‌ای شبیه کلمه‌ی بقیه داری و خودت خبر نداری. اگر حذف شوی، یک فرصت داری کلمه‌ی بقیه را حدس بزنی.',
 });
 export const BLANK: InfoRole = infoRoleSchema.parse({
   id: 'blank',
@@ -129,6 +131,8 @@ export interface HWState {
   spyGuessAnytime: boolean;
   votes: Record<PlayerId, PlayerId>;
   ties: number;
+  /** after a tie, the re-vote is only between these players */
+  candidates: PlayerId[] | null;
   lastTally: Record<PlayerId, number> | null;
   lastOut: PlayerId | null;
   notice: Msg | null;
@@ -243,6 +247,7 @@ function citizensWin(s: HWState, reason: string, caught: PlayerId | null): HWSta
 function startDiscuss(s: HWState, now: number) {
   s.phase = 'discuss';
   s.votes = {};
+  s.candidates = null;
   s.endsAt = s.roundSeconds > 0 ? now + s.roundSeconds * 1000 : null;
 }
 
@@ -259,6 +264,7 @@ function checkMulti(s: HWState, now: number): HWState {
 
 function eliminate(s: HWState, target: PlayerId, now: number): HWState {
   s.lastOut = target;
+  s.candidates = null;
   s.alive = s.alive.filter((id) => id !== target);
   s.eliminated.push(target);
   s.votes = {};
@@ -298,6 +304,8 @@ function tally(s: HWState, now: number): HWState {
     startDiscuss(s, now);
     return s;
   }
+  // re-vote only between the tied players
+  s.candidates = top;
   s.notice = { k: 'hw.notice.tie' };
   return s;
 }
@@ -333,6 +341,7 @@ export function setupHW(
     spyGuessAnytime: def.spyGuessAnytime,
     votes: {},
     ties: 0,
+    candidates: null,
     lastTally: null,
     lastOut: null,
     notice: null,
@@ -376,12 +385,14 @@ export function reduceHW(
       if (s.phase !== 'vote' || s.voteMode !== 'secret') return state;
       if (!s.alive.includes(actor) || !s.alive.includes(action.target) || action.target === actor)
         return state;
+      if (s.candidates && !s.candidates.includes(action.target)) return state;
       s.votes[actor] = action.target;
       if (s.alive.every((id) => s.votes[id])) return tally(s, now);
       return s;
     }
     case 'hostEliminate': {
       if (s.phase !== 'vote' || !hostOk(s, actor) || !s.alive.includes(action.target)) return state;
+      if (s.candidates && !s.candidates.includes(action.target)) return state;
       return eliminate(s, action.target, now);
     }
     case 'declareGuess': {
@@ -433,6 +444,8 @@ export interface HWView {
   acked: PlayerId[];
   voted: PlayerId[];
   myVote: PlayerId | null;
+  /** tie re-vote: only these can be voted for */
+  candidates: PlayerId[] | null;
   lastTally: Record<PlayerId, number> | null;
   lastOut: { id: PlayerId; roleName: string; emoji: string } | null;
   notice: Msg | null;
@@ -477,6 +490,7 @@ export function viewHW(s: HWState, viewer: PlayerId | 'public'): HWView {
     acked: s.acked,
     voted: Object.keys(s.votes),
     myVote: viewer === 'public' ? null : (s.votes[viewer] ?? null),
+    candidates: s.candidates,
     lastTally: s.lastTally,
     lastOut:
       s.lastOut && lastOutRole

@@ -23,6 +23,8 @@ import { PackPicker } from '@/custom/PackPicker';
 import { InfoRolePicker } from '@/custom/RolePickers';
 import type { HWAction, HWView } from './core';
 import { itemsOf } from '@/content/builtin';
+import type { PackSelection } from '@/content/schema';
+import { secretGroups } from './sources';
 
 type AnyCfg = Record<string, unknown> & { roundSeconds: number; voteMode: 'secret' | 'host' };
 
@@ -121,6 +123,7 @@ export function HiddenWordSetup({
           onChange={(v) => set({ blanks: v })}
         />
       )}
+      {'sources' in config && <SourcesPicker config={config} set={set} />}
       {'categories' in config && (
         <div className="flex flex-col gap-1.5">
           <span className="text-muted text-sm font-bold">{t('hw.cfg.categories')}</span>
@@ -153,6 +156,63 @@ export function HiddenWordSetup({
       {'extraRoles' in config && packKind !== 'pairs' && (
         <InfoRolePicker value={config.extraRoles as never} onChange={(extraRoles) => set({ extraRoles })} />
       )}
+    </div>
+  );
+}
+
+/** Spy family secret sources: locations + every word category (several can be mixed). */
+function SourcesPicker({
+  config,
+  set,
+}: {
+  config: Record<string, unknown>;
+  set: (p: Record<string, unknown>) => void;
+}) {
+  const t = useT();
+  const groups = useMemo(
+    () =>
+      secretGroups({ packs: config.packs as PackSelection, wordPacks: config.wordPacks as PackSelection }),
+    [config.packs, config.wordPacks],
+  );
+  const list = config.sources as string[];
+  const on = (id: string) => list.length === 0 || list.includes(id);
+  const toggle = (id: string) => {
+    const current = list.length === 0 ? groups.map((g) => g.id) : list;
+    const next = on(id) ? current.filter((x) => x !== id) : [...current, id];
+    if (next.length === 0) return;
+    set({ sources: next.length === groups.length ? [] : next });
+  };
+  return (
+    <div className="flex flex-col gap-1.5" data-testid="sources">
+      <span className="text-muted text-sm font-bold">{t('hw.cfg.sources')}</span>
+      <div className="flex flex-wrap gap-2">
+        {groups.map((g) => (
+          <button
+            key={g.id}
+            type="button"
+            aria-pressed={on(g.id)}
+            onClick={() => toggle(g.id)}
+            className={cn(
+              'h-10 rounded-full border px-3 text-sm font-bold',
+              on(g.id) ? 'border-accent bg-accent/20' : 'border-border text-muted',
+            )}
+          >
+            {g.label}
+          </button>
+        ))}
+      </div>
+      <span className="text-muted text-xs">{t('hw.cfg.sourcesHint')}</span>
+      <Toggle
+        label={t('hw.cfg.spySeesCategory')}
+        hint={t('hw.cfg.spySeesCategoryHint')}
+        checked={config.spySeesCategory as boolean}
+        onChange={(v) => set({ spySeesCategory: v })}
+      />
+      <PackPicker
+        kind="words"
+        value={config.wordPacks as never}
+        onChange={(wordPacks) => set({ wordPacks })}
+      />
     </div>
   );
 }
@@ -339,7 +399,11 @@ export function HiddenWordPlay({ view, dispatch, me, isHost, now, mode }: PlayPr
         <div className="flex flex-col gap-3">
           {header}
           <h2 className="text-xl font-black">{t('hw.whoWasVoted')}</h2>
-          <PlayerPicker players={alivePlayers} value={pick} onChange={setPick} />
+          <PlayerPicker
+            players={alivePlayers.filter((p) => !view.candidates || view.candidates.includes(p.id))}
+            value={pick}
+            onChange={setPick}
+          />
           <Button
             size="lg"
             disabled={!pick}
@@ -359,7 +423,13 @@ export function HiddenWordPlay({ view, dispatch, me, isHost, now, mode }: PlayPr
         {canVote ? (
           <>
             <h2 className="text-xl font-black">{t('hw.voteWho')}</h2>
-            <PlayerPicker players={alivePlayers.filter((p) => p.id !== me)} value={pick} onChange={setPick} />
+            <PlayerPicker
+              players={alivePlayers.filter(
+                (p) => p.id !== me && (!view.candidates || view.candidates.includes(p.id)),
+              )}
+              value={pick}
+              onChange={setPick}
+            />
             <Button
               size="lg"
               disabled={!pick}

@@ -123,6 +123,25 @@ describe('spy.classic', () => {
     expect(d.result()!.title.k).toBe('hw.result.citizens');
   });
 
+  it('a tie re-vote is only between the tied players', () => {
+    const d = new Driver(spyClassic, makePlayers(5));
+    ackAll(d);
+    d.act('p1', { type: 'startVote' });
+    // p1→p2, p2→p1, p3→p1, p4→p2, p5→p3  ⇒ p1:2, p2:2, p3:1 → tie between p1 and p2
+    const votes: Record<string, string> = { p1: 'p2', p2: 'p1', p3: 'p1', p4: 'p2', p5: 'p3' };
+    for (const [a, b] of Object.entries(votes)) d.act(a, { type: 'vote', target: b });
+    expect((d.state as HWState).candidates?.sort()).toEqual(['p1', 'p2']);
+    expect((d.view('p4') as HWView).candidates?.sort()).toEqual(['p1', 'p2']);
+    d.noop('p4', { type: 'vote', target: 'p3' }); // p3 is not tied
+    d.act('p4', { type: 'vote', target: 'p1' });
+    d.act('p3', { type: 'vote', target: 'p1' });
+    d.act('p5', { type: 'vote', target: 'p1' });
+    d.act('p1', { type: 'vote', target: 'p2' });
+    d.act('p2', { type: 'vote', target: 'p1' });
+    expect((d.state as HWState).lastOut).toBe('p1');
+    expect((d.state as HWState).candidates).toBeNull();
+  });
+
   it('a tie forces a revote; a second tie lets the spy win', () => {
     const d = new Driver(spyClassic, makePlayers(4));
     ackAll(d);
@@ -171,6 +190,44 @@ describe('spy.classic', () => {
     ackAll(d);
     d.act('p3', { type: 'startVote' });
     expect((d.state as HWState).phase).toBe('vote');
+  });
+});
+
+describe('secret sources (locations + word categories)', () => {
+  it('classic draws from every category by default; the spy sees the category', () => {
+    const cats = new Set<string>();
+    for (let seed = 0; seed < 60; seed++) {
+      const d = new Driver(spyClassic, makePlayers(4), undefined, { seed });
+      const s = d.state as HWState;
+      const spy = spiesOf(s)[0]!;
+      const v = d.view(spy) as HWView;
+      expect(v.me?.word).toBeNull();
+      expect(v.me?.category).toBeTruthy();
+      expect(v.reference).toContain(s.secret);
+      cats.add(v.me!.category!);
+    }
+    expect(cats.size).toBeGreaterThan(4);
+    expect(cats.has('مکان')).toBe(true);
+  });
+  it('host can restrict sources and hide the category from the spy', () => {
+    for (let seed = 0; seed < 10; seed++) {
+      const d = new Driver(
+        spyClassic,
+        makePlayers(4),
+        { ...spyClassic.defaultConfig, sources: ['حیوان'], spySeesCategory: false },
+        { seed },
+      );
+      const s = d.state as HWState;
+      const cit = d.view(citizensOf(s)[0]!) as HWView;
+      expect(cit.me?.category).toBe('حیوان');
+      const spy = d.view(spiesOf(s)[0]!) as HWView;
+      expect(spy.me?.category).toBeNull();
+      expect(spy.me?.roleName).toBe('جاسوس');
+    }
+  });
+  it('many spies uses the same sources', () => {
+    const d = new Driver(spyMulti, makePlayers(6), { ...spyMulti.defaultConfig, sources: ['غذا'] });
+    expect((d.view(citizensOf(d.state as HWState)[0]!) as HWView).me?.category).toBe('غذا');
   });
 });
 
@@ -261,14 +318,20 @@ describe('spy.infiltrator / spy.blank (multi-round elimination)', () => {
     expect(cit.me?.word).toBe(s.secret);
   });
 
-  it('eliminating the infiltrator → citizens win', () => {
-    const d = new Driver(spyInfiltrator, makePlayers(5));
-    ackAll(d);
-    const s = d.state as HWState;
-    const inf = Object.entries(s.assign).find(([, a]) => a.roleId === 'infiltrator')![0];
-    d.act('p1', { type: 'startVote' });
-    for (const id of d.ids()) d.act(id, { type: 'vote', target: id === inf ? citizensOf(s)[0]! : inf });
-    expect(d.result()!.title.k).toBe('hw.result.citizens');
+  it("eliminated infiltrator guesses the citizens' word: wrong → citizens win, right → infiltrators win", () => {
+    for (const right of [false, true]) {
+      const d = new Driver(spyInfiltrator, makePlayers(5));
+      ackAll(d);
+      const s = d.state as HWState;
+      const inf = Object.entries(s.assign).find(([, a]) => a.roleId === 'infiltrator')![0];
+      d.act('p1', { type: 'startVote' });
+      for (const id of d.ids()) d.act(id, { type: 'vote', target: id === inf ? citizensOf(s)[0]! : inf });
+      expect((d.state as HWState).phase).toBe('guess');
+      expect(d.pending()).toEqual([inf]);
+      expect((d.view(inf) as HWView).guess?.options).toBeNull(); // free text
+      d.act(inf, { type: 'guess', answer: right ? s.secret : 'هیچی' });
+      expect(d.result()!.title.k).toBe(right ? 'hw.result.spies' : 'hw.result.citizens');
+    }
   });
 
   it('wrong eliminations continue the game until infiltrators outnumber', () => {
