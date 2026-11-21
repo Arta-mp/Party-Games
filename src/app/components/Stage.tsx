@@ -62,6 +62,7 @@ export function LocalStage() {
       <div className="flex flex-col gap-3" data-testid="private-view">
         <Notice>{t('pp.onlyYou', { name: name(privateFor) })}</Notice>
         <Play
+          key={privateFor}
           view={runner.viewFor(privateFor) as never}
           dispatch={dispatch(privateFor)}
           me={privateFor}
@@ -90,6 +91,7 @@ export function LocalStage() {
   return (
     <div className="flex flex-col gap-3" data-testid="public-view">
       <Play
+        key="public"
         view={runner.viewFor('public') as never}
         dispatch={dispatch(runner.hostId)}
         me={null}
