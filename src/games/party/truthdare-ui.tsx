@@ -19,20 +19,21 @@ export function TruthDareSetup({ config, onChange }: SetupProps<TDConfig>) {
 
 /** Spinner: cycles through names quickly, then lands on the host-chosen player (deterministic per spinId). */
 function Spinner({ view }: { view: TDView }) {
-  const [shown, setShown] = useState<string | null>(view.current);
+  const { current, spinId, players } = view;
+  const [shown, setShown] = useState<string | null>(current);
   const [spinning, setSpinning] = useState(false);
   useEffect(() => {
-    if (!view.current || view.spinId === 0) return;
+    if (!current || spinId === 0) return;
     setSpinning(true);
     let i = 0;
-    const names = view.players.map((p) => p.id);
+    const names = players.map((p) => p.id);
     const id = setInterval(() => {
       setShown(names[i++ % names.length]!);
       play('tick');
     }, 90);
     const stop = setTimeout(() => {
       clearInterval(id);
-      setShown(view.current);
+      setShown(current);
       setSpinning(false);
       play('reveal');
     }, 1300);
@@ -40,7 +41,7 @@ function Spinner({ view }: { view: TDView }) {
       clearInterval(id);
       clearTimeout(stop);
     };
-  }, [view.spinId, view.current, view.players]);
+  }, [spinId, current, players]);
   const p = view.players.find((x) => x.id === shown);
   return (
     <Card className="flex flex-col items-center gap-3 py-6" data-testid="spinner">
