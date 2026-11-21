@@ -407,11 +407,14 @@ export function HoldReveal({
   onSeen,
   label,
   className,
+  compact,
 }: {
   children: ReactNode;
   onSeen?: () => void;
   label?: string;
   className?: string;
+  /** single-line variant for small spaces */
+  compact?: boolean;
 }) {
   const t = useT();
   const [open, setOpen] = useState(false);
@@ -447,9 +450,12 @@ export function HoldReveal({
         transition={{ duration: 0.25 }}
       >
         <span className="absolute inset-0 flex flex-col items-center justify-center gap-3 rounded-[var(--radius-card)] border-2 border-dashed border-accent/60 bg-surface [backface-visibility:hidden]">
-          <span className="text-6xl">👆</span>
-          <span className="text-lg font-black">{label ?? t('common.holdToSee')}</span>
-          <span className="text-sm text-muted">{t('common.releaseToHide')}</span>
+          {!compact && <span className="text-6xl">👆</span>}
+          <span className={compact ? 'text-sm font-black' : 'text-lg font-black'}>
+            {compact && '👆 '}
+            {label ?? t('common.holdToSee')}
+          </span>
+          {!compact && <span className="text-sm text-muted">{t('common.releaseToHide')}</span>}
         </span>
         <span className="absolute inset-0 flex flex-col items-center justify-center gap-2 overflow-hidden rounded-[var(--radius-card)] border-2 border-accent bg-surface-2 p-4 [backface-visibility:hidden] [transform:rotateY(180deg)]">
           {open && children}
