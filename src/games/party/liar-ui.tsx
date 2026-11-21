@@ -118,8 +118,26 @@ export function LiarPlay({ view, dispatch, me, isHost }: PlayProps<LiarView, Lia
             {o.truth ? t('liar.truth') : t('liar.by', { names: o.authors.map(name).join('، ') })}
             {o.pickedBy.length > 0 && ` · ${t('liar.pickedBy', { names: o.pickedBy.map(name).join('، ') })}`}
           </span>
+          {view.funnyWinners?.includes(i) && <b className="text-sm">😂 {t('liar.funniest')}</b>}
+          {view.phase === 'reveal' &&
+            !o.truth &&
+            !view.funnyWinners &&
+            view.myFunny == null &&
+            (view.local || (me && !o.authors.includes(me))) && (
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => dispatch({ type: 'funny', option: i })}
+                data-testid={`liar-funny-${i}`}
+              >
+                😂 {t('liar.voteFunny')}
+              </Button>
+            )}
         </Card>
       ))}
+      {view.phase === 'reveal' && !view.funnyWinners && view.myFunny != null && (
+        <Notice>{t('hw.votesIn', { n: view.funnyVoted.length, total: view.players.length })}</Notice>
+      )}
       <TotalsTable players={view.players} totals={view.scores} />
       {Object.keys(view.lastGain).length > 0 && (
         <p className="text-muted text-xs">

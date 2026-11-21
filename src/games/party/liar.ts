@@ -19,6 +19,8 @@ export type LiarConfig = z.infer<typeof liarConfig>;
 export const liarAction = z.discriminatedUnion('type', [
   z.object({ type: z.literal('lie'), text: z.string().trim().min(1).max(60) }),
   z.object({ type: z.literal('pick'), option: z.number().int().min(0).max(30) }),
+  /** vote for the funniest lie after the reveal (+1 to its author) */
+  z.object({ type: z.literal('funny'), option: z.number().int().min(0).max(30) }),
   z.object({ type: z.literal('next') }),
 ]);
 export type LiarAction = z.infer<typeof liarAction>;
@@ -40,6 +42,8 @@ export interface LiarState {
   picks: Record<PlayerId, number>;
   scores: Record<PlayerId, number>;
   lastGain: Record<PlayerId, number>;
+  funny: Record<PlayerId, number>;
+  funnyWinners: number[] | null;
 }
 
 export interface LiarView {
@@ -57,6 +61,10 @@ export interface LiarView {
   reveal: { text: string; truth: boolean; authors: PlayerId[]; pickedBy: PlayerId[] }[] | null;
   scores: Record<PlayerId, number>;
   lastGain: Record<PlayerId, number>;
+  local: boolean;
+  myFunny: number | null;
+  funnyVoted: PlayerId[];
+  funnyWinners: number[] | null;
 }
 
 function buildOptions(s: LiarState, rng: { shuffle<T>(x: readonly T[]): T[] }) {
@@ -83,6 +91,25 @@ function score(s: LiarState) {
   }
 }
 
+/** +1 to the author(s) of the most-liked lie */
+function finishFunny(s: LiarState) {
+  const counts: Record<number, number> = {};
+  for (const i of Object.values(s.funny)) counts[i] = (counts[i] ?? 0) + 1;
+  const max = Math.max(0, ...Object.values(counts));
+  const top =
+    max > 0
+      ? Object.keys(counts)
+          .map(Number)
+          .filter((i) => counts[i] === max)
+      : [];
+  for (const i of top)
+    for (const a of s.options[i]!.authors) {
+      s.scores[a] = (s.scores[a] ?? 0) + 1;
+      s.lastGain[a] = (s.lastGain[a] ?? 0) + 1;
+    }
+  s.funnyWinners = top;
+}
+
 export const liar: GameModule<LiarConfig, LiarState, LiarAction, LiarView> = {
   id: 'party.liar',
   family: 'party',
@@ -104,6 +131,8 @@ export const liar: GameModule<LiarConfig, LiarState, LiarAction, LiarView> = {
       picks: {},
       scores: Object.fromEntries(players.map((p) => [p.id, 0])),
       lastGain: {},
+      funny: {},
+      funnyWinners: null,
     };
   },
   reduce(state, action, actor, ctx) {
@@ -131,9 +160,29 @@ export const liar: GameModule<LiarConfig, LiarState, LiarAction, LiarView> = {
         }
         return s;
       }
+      case 'funny': {
+        if (s.phase !== 'reveal' || s.funnyWinners) return state;
+        const o = s.options[action.option];
+        if (
+          !o ||
+          o.authors.length === 0 ||
+          (!s.local && (o.authors.includes(actor) || s.funny[actor] != null))
+        )
+          return state;
+        s.funny[actor] = action.option;
+        // pass & play: the table picks one together; online: when everyone has voted
+        const voters = s.players.filter((p) =>
+          s.options.some((x) => x.authors.length && !x.authors.includes(p.id)),
+        );
+        if (s.local || voters.every((p) => s.funny[p.id] != null)) finishFunny(s);
+        return s;
+      }
       case 'next':
         if (s.phase !== 'reveal' || !(s.local || actor === s.hostId)) return state;
+        if (!s.funnyWinners) finishFunny(s);
         s.round++;
+        s.funny = {};
+        s.funnyWinners = null;
         s.lies = {};
         s.picks = {};
         s.options = [];
@@ -177,6 +226,10 @@ export const liar: GameModule<LiarConfig, LiarState, LiarAction, LiarView> = {
           : null,
       scores: s.scores,
       lastGain: s.lastGain,
+      myFunny: viewer === 'public' ? null : (s.funny[viewer] ?? null),
+      funnyVoted: Object.keys(s.funny),
+      funnyWinners: s.funnyWinners,
+      local: s.local,
     };
   },
   result(s) {

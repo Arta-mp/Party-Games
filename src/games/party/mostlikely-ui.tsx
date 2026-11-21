@@ -19,6 +19,11 @@ export function MostLikelySetup({ config, onChange }: SetupProps<MLConfig>) {
         onChange={(rounds) => onChange({ ...config, rounds })}
       />
       <Toggle
+        label={t('ml.cfg.reveal')}
+        checked={config.revealVoters}
+        onChange={(revealVoters) => onChange({ ...config, revealVoters })}
+      />
+      <Toggle
         label={t('ml.cfg.self')}
         checked={config.allowSelf}
         onChange={(allowSelf) => onChange({ ...config, allowSelf })}
@@ -35,6 +40,7 @@ export function MostLikelySetup({ config, onChange }: SetupProps<MLConfig>) {
 export function MostLikelyPlay({ view, dispatch, me, isHost }: PlayProps<MLView, MLAction>) {
   const t = useT();
   const [pick, setPick] = useState<string | null>(null);
+  const name = (id: string) => view.players.find((p) => p.id === id)?.name ?? '';
   const q = (
     <Card className="border-accent/40 flex flex-col gap-2 py-6 text-center">
       <Badge className="mx-auto">{t('ml.q', { n: view.index + 1, total: view.total })}</Badge>
@@ -84,6 +90,15 @@ export function MostLikelyPlay({ view, dispatch, me, isHost }: PlayProps<MLView,
     <div className="flex flex-col gap-3">
       {q}
       {view.tally && <VoteBars players={view.players} counts={view.tally} highlight={view.top} />}
+      {view.voters && (
+        <Card className="flex flex-col gap-1 text-sm" data-testid="voters">
+          {Object.entries(view.voters).map(([voter, target]) => (
+            <span key={voter}>
+              {name(voter)} → <b>{name(target)}</b>
+            </span>
+          ))}
+        </Card>
+      )}
       <TotalsTable players={view.players} totals={view.points} />
       {isHost && (
         <Button size="lg" onClick={() => dispatch({ type: 'next' })} data-testid="next-question">

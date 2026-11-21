@@ -9,6 +9,8 @@ import { MostLikelyPlay, MostLikelySetup } from './mostlikely-ui';
 export const mlConfig = z.object({
   rounds: z.number().int().min(1).max(30).default(8),
   allowSelf: z.boolean().default(true),
+  /** after each result, show who voted for whom */
+  revealVoters: z.boolean().default(false),
   packs: packSelection.default({ builtin: ['mostlikely-fa'], custom: [] }),
 });
 export type MLConfig = z.infer<typeof mlConfig>;
@@ -45,6 +47,8 @@ export interface MLView {
   myVote: PlayerId | null;
   tally: Record<PlayerId, number> | null;
   top: PlayerId[];
+  /** voter → target, only after the result and only when the host enabled it */
+  voters: Record<PlayerId, PlayerId> | null;
   points: Record<PlayerId, number>;
 }
 
@@ -126,6 +130,7 @@ export const mostLikely: GameModule<MLConfig, MLState, MLAction, MLView> = {
       voted: Object.keys(s.votes),
       myVote: viewer === 'public' ? null : (s.votes[viewer] ?? null),
       tally: s.phase === 'vote' ? null : s.tally,
+      voters: s.phase === 'reveal' && s.cfg.revealVoters ? s.votes : null,
       top,
       points: s.points,
     };

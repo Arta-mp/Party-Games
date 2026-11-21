@@ -144,7 +144,7 @@ describe('party.truthdare', () => {
     const d = new Driver(truthDare, makePlayers(3), {
       ...truthDare.defaultConfig,
       turns: 6,
-      level: 'family',
+      categories: ['family'],
     });
     let last: string | null = null;
     for (let i = 0; i < 6; i++) {
@@ -163,22 +163,61 @@ describe('party.truthdare', () => {
     const pts = Object.values((d.state as TDState).points).reduce((a, b) => a + b, 0);
     expect(pts).toBe(3 * 1 + 3 * 2);
   });
-  it('family level never serves spicy prompts', async () => {
+  it('only the enabled categories are served (e.g. +18 only when chosen)', async () => {
     const { itemsOf } = await import('@/content/builtin');
-    const spicy = itemsOf('questions', undefined)
-      .filter((q) => q.level === 'spicy')
-      .map((q) => q.q);
-    const d = new Driver(truthDare, makePlayers(2), {
-      ...truthDare.defaultConfig,
-      turns: 30,
-      level: 'family',
-    });
-    for (let i = 0; i < 24; i++) {
-      d.act('p1', { type: 'spin' });
-      const cur = (d.state as TDState).current!;
-      d.act(cur, { type: 'choose', kind: i % 2 ? 'dare' : 'truth' });
-      expect(spicy).not.toContain((d.state as TDState).prompt);
-      d.act(cur, { type: 'done', ok: false });
+    const all = itemsOf('questions', { builtin: ['truthdare-fa'], custom: [] });
+    for (const cats of [['family'], ['couples', 'colleagues'], ['adult']] as const) {
+      const allowed = all
+        .filter((q) => (cats as readonly string[]).includes(q.level ?? 'family'))
+        .map((q) => q.q);
+      const d = new Driver(truthDare, makePlayers(2), {
+        ...truthDare.defaultConfig,
+        turns: 30,
+        categories: [...cats],
+      });
+      for (let i = 0; i < 12; i++) {
+        d.act('p1', { type: 'spin' });
+        const cur = (d.state as TDState).current!;
+        d.act(cur, { type: 'choose', kind: i % 2 ? 'dare' : 'truth' });
+        expect(allowed).toContain((d.state as TDState).prompt);
+        d.act(cur, { type: 'done', ok: false });
+      }
     }
+    expect(truthDare.defaultConfig.categories).not.toContain('adult');
+  });
+  it('another player can replace the card with their own truth/dare', () => {
+    const d = new Driver(truthDare, makePlayers(3));
+    d.act('p1', { type: 'spin' });
+    const cur = (d.state as TDState).current!;
+    const other = d.ids().find((p) => p !== cur)!;
+    d.act(cur, { type: 'choose', kind: 'dare' });
+    d.noop(cur, { type: 'custom', text: 'یه جرأت ساختگی' }); // not for yourself
+    d.act(other, { type: 'custom', text: 'با لهجه‌ی شیرازی آواز بخوان' });
+    expect((d.state as TDState).prompt).toBe('با لهجه‌ی شیرازی آواز بخوان');
+    expect((d.state as TDState).author).toBe(other);
+    d.act(cur, { type: 'done', ok: true });
+    expect((d.state as TDState).author).toBeNull();
+  });
+});
+
+describe('party design options', () => {
+  it('esm famil accepts host-added custom columns', () => {
+    const d = new Driver(esmFamil, makePlayers(2), {
+      ...esmFamil.defaultConfig,
+      columns: ['اسم', 'برند', 'فوتبالیست'],
+    });
+    expect((d.view('p1') as EsmView).columns).toEqual(['اسم', 'برند', 'فوتبالیست']);
+  });
+  it('most likely: voters are shown only when the host enables it', () => {
+    for (const revealVoters of [false, true]) {
+      const d = new Driver(mostLikely, makePlayers(3), { ...mostLikely.defaultConfig, revealVoters });
+      for (const id of d.ids()) d.act(id, { type: 'vote', target: 'p2' });
+      const v = d.view('p1') as MLView;
+      expect(v.voters).toEqual(revealVoters ? { p1: 'p2', p2: 'p2', p3: 'p2' } : null);
+    }
+    // never during voting
+    const d = new Driver(mostLikely, makePlayers(3), { ...mostLikely.defaultConfig, revealVoters: true });
+    d.act('p1', { type: 'vote', target: 'p3' });
+    expect((d.view('p2') as MLView).voters).toBeNull();
   });
 });

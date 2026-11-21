@@ -14,7 +14,8 @@ export const cardItem = z.object({ word: text, forbidden: z.array(text).length(5
 export const spectrumItem = z.object({ left: text, right: text });
 export const questionItem = z.object({
   q: z.string().trim().min(3).max(240),
-  level: z.enum(['family', 'friends', 'spicy']).optional(),
+  /** truth-or-dare category (spicy = bold; adult = +18, suggestive but not explicit) */
+  level: z.enum(['family', 'friends', 'spicy', 'couples', 'colleagues', 'adult']).optional(),
   type: z.enum(['truth', 'dare']).optional(),
 });
 export const triviaItem = z.object({ q: z.string().trim().min(5).max(240), answer: text });

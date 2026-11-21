@@ -5,11 +5,15 @@ import { clone, type GameModule, type Player, type PlayerId } from '@/core/engin
 import { META } from '../meta';
 import { TruthDarePlay, TruthDareSetup } from './truthdare-ui';
 
-/** «حقیقت یا جرأت»: a spinner picks a player, they choose truth or dare at the chosen level. */
-export const LEVELS = ['family', 'friends', 'spicy'] as const;
+/**
+ * «حقیقت یا جرأت»: a spinner picks a player, they choose truth or dare from the enabled categories;
+ * any other player may replace the drawn card with one they write themselves.
+ */
+export const CATEGORIES = ['family', 'friends', 'spicy', 'couples', 'colleagues', 'adult'] as const;
+export type TDCategory = (typeof CATEGORIES)[number];
 
 export const tdConfig = z.object({
-  level: z.enum(LEVELS).default('friends'),
+  categories: z.array(z.enum(CATEGORIES)).min(1).default(['family', 'friends']),
   turns: z.number().int().min(2).max(60).default(12),
   packs: packSelection.default({ builtin: ['truthdare-fa'], custom: [] }),
 });
@@ -18,6 +22,7 @@ export type TDConfig = z.infer<typeof tdConfig>;
 export const tdAction = z.discriminatedUnion('type', [
   z.object({ type: z.literal('spin') }),
   z.object({ type: z.literal('choose'), kind: z.enum(['truth', 'dare']) }),
+  z.object({ type: z.literal('custom'), text: z.string().trim().min(3).max(200) }),
   z.object({ type: z.literal('done'), ok: z.boolean() }),
   z.object({ type: z.literal('end') }),
 ]);
@@ -34,13 +39,13 @@ export interface TDState {
   spinId: number;
   kind: 'truth' | 'dare' | null;
   prompt: string | null;
+  /** who wrote the current card (null = drawn from the deck) */
+  author: PlayerId | null;
   used: string[];
   points: Record<PlayerId, number>;
 }
 
-export type TDView = Omit<TDState, 'used' | 'hostId' | 'cfg'> & { level: TDConfig['level']; turns: number };
-
-const levelsUpTo = (l: TDConfig['level']) => LEVELS.slice(0, LEVELS.indexOf(l) + 1);
+export type TDView = Omit<TDState, 'used' | 'hostId' | 'cfg'> & { categories: TDCategory[]; turns: number };
 
 export const truthDare: GameModule<TDConfig, TDState, TDAction, TDView> = {
   id: 'party.truthdare',
@@ -60,6 +65,7 @@ export const truthDare: GameModule<TDConfig, TDState, TDAction, TDView> = {
     spinId: 0,
     kind: null,
     prompt: null,
+    author: null,
     used: [],
     points: Object.fromEntries(players.map((p) => [p.id, 0])),
   }),
@@ -77,16 +83,24 @@ export const truthDare: GameModule<TDConfig, TDState, TDAction, TDView> = {
       }
       case 'choose': {
         if (s.phase !== 'choose' || (actor !== s.current && !s.local)) return state;
-        const levels = levelsUpTo(s.cfg.level);
+        const cats: string[] = s.cfg.categories;
         const all = itemsOf('questions', s.cfg.packs).filter(
-          (q) => q.type === action.kind && levels.includes(q.level ?? 'family'),
+          (q) => q.type === action.kind && cats.includes(q.level ?? 'family'),
         );
         const fresh = all.filter((q) => !s.used.includes(q.q));
         const pick = ctx.rng.pick(fresh.length ? fresh : all.length ? all : [{ q: '—' }]);
         s.used.push(pick.q);
         s.kind = action.kind;
         s.prompt = pick.q;
+        s.author = null;
         s.phase = 'task';
+        return s;
+      }
+      case 'custom': {
+        // someone else writes their own truth/dare for the chosen player
+        if (s.phase !== 'task' || (actor === s.current && !s.local)) return state;
+        s.prompt = action.text;
+        s.author = actor;
         return s;
       }
       case 'done': {
@@ -96,6 +110,7 @@ export const truthDare: GameModule<TDConfig, TDState, TDAction, TDView> = {
         s.turn++;
         s.kind = null;
         s.prompt = null;
+        s.author = null;
         s.phase = s.turn >= s.cfg.turns ? 'over' : 'spin';
         return s;
       }
@@ -116,8 +131,9 @@ export const truthDare: GameModule<TDConfig, TDState, TDAction, TDView> = {
     spinId: s.spinId,
     kind: s.kind,
     prompt: s.prompt,
+    author: s.author,
     points: s.points,
-    level: s.cfg.level,
+    categories: s.cfg.categories,
     turns: s.cfg.turns,
   }),
   result(s) {

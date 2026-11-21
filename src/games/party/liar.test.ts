@@ -30,4 +30,24 @@ describe('party.liar', () => {
     d.act('p1', { type: 'next' });
     expect(s().phase).toBe('write');
   });
+
+  it('funniest-lie vote gives +1 to its author (not for your own lie or the truth)', () => {
+    const d = new Driver(liar, makePlayers(3), { ...liar.defaultConfig, rounds: 2 });
+    const s = () => d.state as LiarState;
+    d.act('p1', { type: 'lie', text: 'دروغ الف' });
+    d.act('p2', { type: 'lie', text: 'دروغ ب' });
+    d.act('p3', { type: 'lie', text: 'دروغ پ' });
+    const idx = (txt: string) => s().options.findIndex((o) => o.text === txt);
+    const truth = s().options.findIndex((o) => o.authors.length === 0);
+    for (const p of d.ids()) d.act(p, { type: 'pick', option: truth });
+    const before = { ...s().scores };
+    d.noop('p1', { type: 'funny', option: idx('دروغ الف') }); // own lie
+    d.noop('p1', { type: 'funny', option: truth }); // the truth isn't a lie
+    d.act('p1', { type: 'funny', option: idx('دروغ ب') });
+    d.act('p2', { type: 'funny', option: idx('دروغ پ') });
+    d.act('p3', { type: 'funny', option: idx('دروغ ب') });
+    expect(s().funnyWinners).toEqual([idx('دروغ ب')]);
+    expect(s().scores.p2).toBe(before.p2! + 1);
+    expect((d.view('p1') as LiarView).funnyWinners).toEqual([idx('دروغ ب')]);
+  });
 });

@@ -3,20 +3,40 @@ import { useEffect, useState } from 'react';
 import type { PlayProps, SetupProps } from '@/core/engine/types';
 import { useT } from '@/i18n';
 import { play } from '@/lib/fx';
-import { Avatar, Badge, Button, Card, Segmented, Stepper } from '@/ui/kit';
-import { LEVELS, type TDAction, type TDConfig, type TDView } from './truthdare';
+import { Avatar, Badge, Button, Card, Notice, Stepper, TextField } from '@/ui/kit';
+import { cn } from '@/ui/cn';
+import { CATEGORIES, type TDAction, type TDConfig, type TDView } from './truthdare';
 import { TotalsTable } from './shared-ui';
 
 export function TruthDareSetup({ config, onChange }: SetupProps<TDConfig>) {
   const t = useT();
   return (
     <div className="flex flex-col gap-3">
-      <Segmented
-        label={t('td.cfg.level')}
-        value={config.level}
-        onChange={(level) => onChange({ ...config, level })}
-        options={LEVELS.map((l) => ({ value: l, label: t(`td.level.${l}`) }))}
-      />
+      <span className="text-muted text-sm font-bold">{t('td.cfg.level')}</span>
+      <div className="flex flex-wrap gap-2" data-testid="td-categories">
+        {CATEGORIES.map((c) => {
+          const on = config.categories.includes(c);
+          return (
+            <button
+              key={c}
+              type="button"
+              aria-pressed={on}
+              data-testid={`td-cat-${c}`}
+              onClick={() => {
+                const next = on ? config.categories.filter((x) => x !== c) : [...config.categories, c];
+                if (next.length) onChange({ ...config, categories: next });
+              }}
+              className={cn(
+                'h-10 rounded-full border px-3 text-sm font-bold',
+                on ? 'border-accent bg-accent/20' : 'border-border text-muted',
+              )}
+            >
+              {t(`td.level.${c}`)}
+            </button>
+          );
+        })}
+      </div>
+      {config.categories.includes('adult') && <Notice tone="warn">{t('td.adultNote')}</Notice>}
       <Stepper
         label={t('td.cfg.turns')}
         value={config.turns}
@@ -79,10 +99,11 @@ export function TruthDarePlay({ view, dispatch, me, isHost }: PlayProps<TDView, 
   const t = useT();
   const name = view.players.find((p) => p.id === view.current)?.name ?? '';
   const mine = view.local || me === view.current;
+  const [custom, setCustom] = useState('');
   return (
     <div className="flex flex-col gap-3">
       <div className="flex gap-2">
-        <Badge>{t(`td.level.${view.level}`)}</Badge>
+        <Badge>{view.categories.map((c) => t(`td.level.${c}`)).join(' · ')}</Badge>
         <Badge>{t('td.turn', { n: view.turn + 1, total: view.turns })}</Badge>
       </div>
       <Spinner view={view} />
@@ -121,7 +142,42 @@ export function TruthDarePlay({ view, dispatch, me, isHost }: PlayProps<TDView, 
             <p className="text-xl leading-9 font-black" data-testid="prompt">
               {view.prompt}
             </p>
+            {view.author && (
+              <p className="text-muted mt-1 text-xs">
+                ✍️ {t('td.by', { name: view.players.find((p) => p.id === view.author)?.name ?? '' })}
+              </p>
+            )}
           </Card>
+          {(view.local || (me && me !== view.current)) && (
+            <form
+              className="flex gap-2"
+              onSubmit={(e) => {
+                e.preventDefault();
+                if (custom.trim().length >= 3) dispatch({ type: 'custom', text: custom.trim() });
+                setCustom('');
+              }}
+            >
+              <div className="flex-1">
+                <TextField
+                  value={custom}
+                  onChange={(e) => setCustom(e.target.value)}
+                  placeholder={view.kind === 'dare' ? t('td.writeDare') : t('td.writeTruth')}
+                  aria-label={t('td.writeOwn')}
+                  maxLength={200}
+                  data-testid="td-custom"
+                />
+              </div>
+              <Button
+                type="submit"
+                size="lg"
+                className="h-14"
+                disabled={custom.trim().length < 3}
+                data-testid="td-custom-send"
+              >
+                ✍️
+              </Button>
+            </form>
+          )}
           {(isHost || mine) && (
             <div className="grid grid-cols-2 gap-2">
               <Button
