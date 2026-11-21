@@ -212,21 +212,58 @@ function AbilityRoleEditor({ initial, onDone }: { initial: AbilityRoleInput | nu
           />
           {ability && (
             <>
-              <Segmented
-                value={ability.action}
-                onChange={(action) => setAbility({ action, priority: DEFAULT_PRIORITY[action] })}
-                options={NIGHT_ACTIONS.slice(0, 4).map((a) => ({ value: a, label: t(`mafia.action.${a}`) }))}
-              />
-              <Segmented
-                value={ability.action}
-                onChange={(action) => setAbility({ action, priority: DEFAULT_PRIORITY[action] })}
-                options={NIGHT_ACTIONS.slice(4).map((a) => ({ value: a, label: t(`mafia.action.${a}`) }))}
-              />
-              <Segmented
-                label={t('custom.target')}
-                value={ability.target ?? 'other'}
-                onChange={(target) => setAbility({ target })}
-                options={TARGETS.map((x) => ({ value: x, label: t(`custom.target.${x}`) }))}
+              {[0, 4, 8].map((from) => (
+                <Segmented
+                  key={from}
+                  value={ability.action}
+                  onChange={(action) =>
+                    setAbility({
+                      action,
+                      priority: DEFAULT_PRIORITY[action],
+                      ...(action === 'revive' ? { target: 'dead' } : {}),
+                      targets: action === 'predict' ? 3 : 1,
+                    })
+                  }
+                  options={NIGHT_ACTIONS.slice(from, from + 4).map((a) => ({
+                    value: a,
+                    label: t(`mafia.action.${a}`),
+                  }))}
+                />
+              ))}
+              {[0, 3].map((from) => (
+                <Segmented
+                  key={from}
+                  label={from === 0 ? t('custom.target') : undefined}
+                  value={ability.target ?? 'other'}
+                  onChange={(target) => setAbility({ target })}
+                  options={TARGETS.slice(from, from + 3).map((x) => ({
+                    value: x,
+                    label: t(`custom.target.${x}`),
+                  }))}
+                />
+              ))}
+              {ability.action === 'predict' && (
+                <Stepper
+                  label={t('custom.targetsCount')}
+                  value={ability.targets ?? 1}
+                  min={1}
+                  max={3}
+                  onChange={(targets) => setAbility({ targets })}
+                />
+              )}
+              {ability.action === 'arm' && (
+                <Toggle
+                  label={t('custom.fakeGun')}
+                  checked={!!ability.fake}
+                  onChange={(fake) => setAbility({ fake })}
+                />
+              )}
+              <Stepper
+                label={t('custom.every')}
+                value={ability.every ?? 1}
+                min={1}
+                max={4}
+                onChange={(every) => setAbility({ every })}
               />
               <Stepper
                 label={t('custom.uses')}
@@ -284,10 +321,19 @@ function AbilityRoleEditor({ initial, onDone }: { initial: AbilityRoleInput | nu
               label={t('custom.winCondition')}
               value={draft.winCondition ?? 'team'}
               onChange={(winCondition) => setDraft({ ...draft, winCondition })}
-              options={(['survive', 'lynched'] as const).map((v) => ({
+              options={(['survive', 'lynched', 'lastStanding'] as const).map((v) => ({
                 value: v,
                 label: t(`custom.win.${v}`),
               }))}
+            />
+          )}
+          {draft.team === 'mafia' && (
+            <Stepper
+              label={t('custom.rank')}
+              value={draft.rank ?? 0}
+              min={0}
+              max={5}
+              onChange={(rank) => setDraft({ ...draft, rank })}
             />
           )}
           <Toggle

@@ -20,7 +20,14 @@ import {
   Toggle,
 } from '@/ui/kit';
 import { SKIP, type MafiaAction, type MafiaConfig, type MafiaKind, type MafiaView } from './core';
-import { balance, defaultComposition, rolePool, type Composition } from './roles';
+import {
+  balance,
+  defaultComposition,
+  rolePool,
+  SCENARIOS,
+  scenarioComposition,
+  type Composition,
+} from './roles';
 
 // ------------------------------------------------------------------ setup
 
@@ -59,6 +66,10 @@ export function makeMafiaSetup(kind: MafiaKind): ComponentType<SetupProps<MafiaC
     const num = useNum();
     const [advanced, setAdvanced] = useState(false);
     const custom = useCustom((s) => s.abilityRoles);
+    const myScenarios = useCustom((s) => s.scenarios);
+    const saveScenario = useCustom((s) => s.saveScenario);
+    const removeScenario = useCustom((s) => s.removeScenario);
+    const [scenarioName, setScenarioName] = useState('');
     const packKind = kind === 'werewolf' ? 'werewolf' : kind === 'onenight' ? 'onenight' : 'mafia';
     const seats = Math.max(1, kind === 'moderated' ? playerCount - 1 : playerCount);
     const pool = useMemo(() => {
@@ -76,6 +87,52 @@ export function makeMafiaSetup(kind: MafiaKind): ComponentType<SetupProps<MafiaC
     return (
       <div className="flex flex-col gap-3">
         {kind === 'moderated' && <Notice>{t('mafia.cfg.moderatorHint')}</Notice>}
+        {packKind === 'mafia' && (
+          <div className="flex flex-col gap-1.5" data-testid="scenarios">
+            <span className="text-muted text-sm font-bold">{t('mafia.cfg.scenario')}</span>
+            <div className="flex flex-wrap gap-2">
+              {SCENARIOS.map((sc) => (
+                <button
+                  key={sc.id}
+                  type="button"
+                  data-testid={`scenario-${sc.id}`}
+                  onClick={() => onChange({ ...config, composition: scenarioComposition(sc, seats) })}
+                  className="border-border h-10 rounded-full border px-3 text-sm font-bold"
+                >
+                  {sc.nameFa}
+                </button>
+              ))}
+              {myScenarios.map((sc) => (
+                <span key={sc.id} className="border-accent flex h-10 items-center rounded-full border ps-3">
+                  <button
+                    type="button"
+                    className="text-sm font-bold"
+                    onClick={() =>
+                      onChange({
+                        ...config,
+                        composition: scenarioComposition(
+                          { roles: sc.roles.map((x) => [x.role, x.n]) },
+                          seats,
+                        ),
+                      })
+                    }
+                  >
+                    ✏️ {sc.nameFa}
+                  </button>
+                  <button
+                    type="button"
+                    aria-label={t('common.delete')}
+                    className="text-muted px-2"
+                    onClick={() => removeScenario(sc.id)}
+                  >
+                    ✕
+                  </button>
+                </span>
+              ))}
+            </div>
+            <span className="text-muted text-xs">{t('mafia.cfg.scenarioHint')}</span>
+          </div>
+        )}
         <Toggle
           label={t('mafia.cfg.autoComp')}
           hint={t('mafia.cfg.autoCompHint', { n: seats })}
@@ -100,6 +157,37 @@ export function makeMafiaSetup(kind: MafiaKind): ComponentType<SetupProps<MafiaC
             <p className="text-muted text-xs">
               {t('mafia.cfg.assigned', { n: num(assigned), seats: num(seats) })}
             </p>
+            <form
+              className="flex gap-2"
+              onSubmit={(e) => {
+                e.preventDefault();
+                const nameFa = scenarioName.trim();
+                if (!nameFa) return;
+                // plain citizens fill the remaining seats automatically, so they aren't stored
+                const roles = comp.filter(
+                  (c) => c.n > 0 && !(c.role.id === 'citizen' || c.role.id === 'villager'),
+                );
+                saveScenario({ id: `sc-${Date.now().toString(36)}`, nameFa, roles });
+                setScenarioName('');
+              }}
+            >
+              <input
+                value={scenarioName}
+                onChange={(e) => setScenarioName(e.target.value)}
+                placeholder={t('mafia.cfg.scenarioName')}
+                aria-label={t('mafia.cfg.scenarioName')}
+                maxLength={40}
+                className="border-border bg-surface-2 focus:border-accent h-12 min-w-0 flex-1 rounded-2xl border px-3 outline-none"
+              />
+              <Button
+                type="submit"
+                variant="secondary"
+                disabled={!scenarioName.trim()}
+                data-testid="save-scenario"
+              >
+                💾 {t('mafia.cfg.saveScenario')}
+              </Button>
+            </form>
           </div>
         )}
         {config.composition == null && (
@@ -129,6 +217,27 @@ export function makeMafiaSetup(kind: MafiaKind): ComponentType<SetupProps<MafiaC
               checked={config.revealOnDeath}
               onChange={(revealOnDeath) => onChange({ ...config, revealOnDeath })}
             />
+            {kind !== 'onenight' && (
+              <>
+                <Toggle
+                  label={t('mafia.cfg.defense')}
+                  hint={t('mafia.cfg.defenseHint')}
+                  checked={config.defense}
+                  onChange={(defense) => onChange({ ...config, defense })}
+                />
+                {config.defense && (
+                  <Stepper
+                    label={t('mafia.cfg.defenseTime')}
+                    value={config.defenseSeconds}
+                    min={10}
+                    max={300}
+                    step={5}
+                    format={(v) => t('common.seconds', { n: num(v) })}
+                    onChange={(defenseSeconds) => onChange({ ...config, defenseSeconds })}
+                  />
+                )}
+              </>
+            )}
             <Segmented
               label={t('hw.cfg.voteMode')}
               value={config.voteMode}
@@ -210,6 +319,7 @@ export function MafiaPlay({ view, dispatch, me, isHost, now, mode }: PlayProps<M
   const t = useT();
   const num = useNum();
   const [pick, setPick] = useState<string | null>(null);
+  const [multi, setMulti] = useState<string[]>([]);
   const [abilityIdx, setAbilityIdx] = useState<number>(view.me?.abilities[0]?.index ?? -1);
   const name = (id: string | null) => view.players.find((p) => p.id === id)?.name ?? '';
   const alive = view.players.filter((p) => view.alive.includes(p.id));
@@ -362,15 +472,27 @@ export function MafiaPlay({ view, dispatch, me, isHost, now, mode }: PlayProps<M
     }
     const abilities = view.me.abilities;
     const current = abilities.find((a) => a.index === abilityIdx) ?? abilities[0];
+    const mates = view.me.teammates.map((m) => m.id);
     const targets = current
-      ? alive.filter((p) =>
-          current.target === 'self'
-            ? p.id === me
-            : current.target === 'other' || current.target === 'teammate'
-              ? p.id !== me
-              : true,
-        )
+      ? current.target === 'dead'
+        ? view.players.filter((p) => view.seats.includes(p.id) && !view.alive.includes(p.id))
+        : alive.filter((p) =>
+            current.target === 'self'
+              ? p.id === me
+              : current.target === 'ownTeam'
+                ? p.id === me || mates.includes(p.id)
+                : current.target === 'teammate'
+                  ? mates.includes(p.id)
+                  : current.target === 'other'
+                    ? p.id !== me
+                    : true,
+          )
       : [];
+    const needed = current?.targets ?? 1;
+    const leaderNote =
+      view.me.role.team === 'mafia' && view.me.leader && view.me.leader !== me ? (
+        <Notice tone="warn">🎩 {t('mafia.leaderDecides', { name: name(view.me.leader) })}</Notice>
+      ) : null;
     return (
       <div className="flex flex-col gap-3">
         {header}
@@ -379,6 +501,7 @@ export function MafiaPlay({ view, dispatch, me, isHost, now, mode }: PlayProps<M
           <RoleCard view={view} />
         </HoldReveal>
         <Notes view={view} />
+        {leaderNote}
         {current ? (
           <>
             {abilities.length > 1 && (
@@ -406,14 +529,40 @@ export function MafiaPlay({ view, dispatch, me, isHost, now, mode }: PlayProps<M
                 ))}
               </div>
             )}
-            <PlayerPicker players={targets} value={pick} onChange={setPick} />
+            {needed > 1 ? (
+              <div className="flex flex-col gap-2" data-testid="multi-pick">
+                <span className="text-muted text-sm">{t('mafia.pickN', { n: needed })}</span>
+                {targets.map((p) => (
+                  <PlayerChip
+                    key={p.id}
+                    name={p.name}
+                    testId={`pick-${p.name}`}
+                    selected={multi.includes(p.id)}
+                    onClick={() =>
+                      setMulti(
+                        multi.includes(p.id)
+                          ? multi.filter((x) => x !== p.id)
+                          : multi.length < needed
+                            ? [...multi, p.id]
+                            : multi,
+                      )
+                    }
+                  />
+                ))}
+              </div>
+            ) : (
+              <PlayerPicker players={targets} value={pick} onChange={setPick} />
+            )}
             <Button
               size="lg"
-              disabled={!pick}
+              disabled={needed > 1 ? multi.length !== needed : !pick}
               onClick={() => {
-                if (!pick) return;
-                dispatch({ type: 'night', ability: current.index, target: pick });
+                if (needed > 1)
+                  dispatch({ type: 'night', ability: current.index, target: multi[0]!, targets: multi });
+                else if (pick) dispatch({ type: 'night', ability: current.index, target: pick });
+                else return;
                 setPick(null);
+                setMulti([]);
                 play('tap');
               }}
               data-testid="night-act"
@@ -430,6 +579,7 @@ export function MafiaPlay({ view, dispatch, me, isHost, now, mode }: PlayProps<M
           </>
         ) : (
           <>
+            {leaderNote}
             <Card className="text-muted text-center">{t('mafia.noAbility')}</Card>
             <Button
               size="lg"
@@ -458,6 +608,11 @@ export function MafiaPlay({ view, dispatch, me, isHost, now, mode }: PlayProps<M
       {view.dawn.revealed.map((r) => (
         <p key={r.id} className="text-sm">
           🔦 {t('mafia.revealed', { name: name(r.id), role: r.role })}
+        </p>
+      ))}
+      {view.dawn.revived.map((id) => (
+        <p key={id} className="text-success text-sm">
+          ✨ {t('mafia.revivedPublic', { name: name(id) })}
         </p>
       ))}
       {view.dawn.silenced.map((id) => (
@@ -525,6 +680,26 @@ export function MafiaPlay({ view, dispatch, me, isHost, now, mode }: PlayProps<M
           </HoldReveal>
         )}
         <Notes view={view} />
+        {view.dayShots.map((sh, i) => (
+          <Notice key={i} tone={sh.died ? 'danger' : 'info'}>
+            🔫{' '}
+            {t(sh.died ? 'mafia.shotDied' : 'mafia.shotMissed', { by: name(sh.by), name: name(sh.target) })}
+          </Notice>
+        ))}
+        {view.me?.hasGun && (
+          <Card className="flex flex-col gap-2" data-testid="gun">
+            <b>🔫 {t('mafia.youHaveGun')}</b>
+            <PlayerPicker players={alive.filter((p) => p.id !== me)} value={pick} onChange={setPick} />
+            <Button
+              variant="danger"
+              disabled={!pick}
+              onClick={() => pick && (dispatch({ type: 'shoot', target: pick }), setPick(null), play('buzz'))}
+              data-testid="shoot"
+            >
+              {t('mafia.shoot')}
+            </Button>
+          </Card>
+        )}
         {isHost && (
           <Button size="lg" onClick={() => dispatch({ type: 'startVote' })} data-testid="start-vote">
             {t('hw.startVote')}
@@ -535,14 +710,59 @@ export function MafiaPlay({ view, dispatch, me, isHost, now, mode }: PlayProps<M
     );
   }
 
-  if (view.phase === 'vote') {
+  const tallyCard = view.firstTally && (
+    <Card className="flex flex-col gap-1 text-sm" data-testid="first-tally">
+      {Object.entries(view.firstTally)
+        .filter(([id]) => id !== SKIP)
+        .sort((a, b) => b[1] - a[1])
+        .map(([id, n]) => (
+          <span key={id} className={cn(view.defendants.includes(id) && 'text-danger font-black')}>
+            {name(id)}: {num(n)}
+          </span>
+        ))}
+    </Card>
+  );
+
+  if (view.phase === 'defense') {
+    return (
+      <div className="flex flex-col gap-3">
+        {header}
+        <h2 className="text-xl font-black">⚖️ {t('mafia.defenseTitle')}</h2>
+        <p className="text-muted text-sm">{t('mafia.defenseHint')}</p>
+        {view.endsAt && (
+          <Timer
+            endsAt={view.endsAt}
+            total={Math.round((view.endsAt - now()) / 1000)}
+            now={now}
+            size={120}
+            onTick={(s) => s > 0 && s <= 5 && play('tick')}
+          />
+        )}
+        <div className="flex flex-col gap-2" data-testid="defendants">
+          {view.defendants.map((id) => (
+            <PlayerChip key={id} name={name(id)} badges={<Badge>⚖️</Badge>} />
+          ))}
+        </div>
+        {tallyCard}
+        {isHost && (
+          <Button size="lg" onClick={() => dispatch({ type: 'startFinal' })} data-testid="start-final">
+            {t('mafia.toFinal')}
+          </Button>
+        )}
+      </div>
+    );
+  }
+
+  if (view.phase === 'vote' || view.phase === 'final') {
+    const isFinal = view.phase === 'final';
+    const pool = isFinal ? alive.filter((p) => view.defendants.includes(p.id)) : alive;
     if (view.voteMode === 'host') {
       if (!isHost) return <Notice>{t('hw.hostRecordsVote')}</Notice>;
       return (
         <div className="flex flex-col gap-3">
           {header}
           <h2 className="text-xl font-black">{t('mafia.whoLynched')}</h2>
-          <PlayerPicker players={alive} value={pick} onChange={setPick} />
+          <PlayerPicker players={pool} value={pick} onChange={setPick} />
           <div className="grid grid-cols-2 gap-2">
             <Button
               size="lg"
@@ -569,8 +789,11 @@ export function MafiaPlay({ view, dispatch, me, isHost, now, mode }: PlayProps<M
         {header}
         {canVote ? (
           <>
-            <h2 className="text-xl font-black">{t('mafia.voteWho')}</h2>
-            <PlayerPicker players={alive.filter((p) => p.id !== me)} value={pick} onChange={setPick} />
+            <h2 className="text-xl font-black">
+              {isFinal ? t('mafia.finalVote') : view.defense ? t('mafia.firstVote') : t('mafia.voteWho')}
+            </h2>
+            {isFinal && tallyCard}
+            <PlayerPicker players={pool.filter((p) => p.id !== me)} value={pick} onChange={setPick} />
             <div className="grid grid-cols-2 gap-2">
               <Button
                 size="lg"

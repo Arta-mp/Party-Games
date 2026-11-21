@@ -29,6 +29,13 @@ test('role editor: build a custom night role step by step and see it in mafia se
   await expect(page.getByTestId('composition')).toContainText('ساقی');
   await expect(page.getByTestId('balance')).toBeVisible();
   await shot(page, 'custom-03-composition');
+  // scenario presets fill the composition (and include scenario-only roles)
+  await page.getByTestId('scenario-godfather').click();
+  await expect(page.getByTestId('composition')).toContainText('کنستانتین');
+  await page.getByLabel('نام سناریوی من').fill('سناریوی ما');
+  await page.getByTestId('save-scenario').click();
+  await expect(page.getByTestId('scenarios')).toContainText('سناریوی ما');
+  await shot(page, 'custom-04-scenario');
 });
 
 test('share link imports a role (validated, no install needed)', async ({ page }) => {
@@ -91,15 +98,23 @@ test('pass & play mafia (app as moderator): night kill → dawn → vote out the
   await page.getByTestId('continue').click();
   await page.getByTestId('start-vote').click();
   const alive = names.filter((n) => n !== victim);
-  for (let i = 0; i < alive.length; i++) {
-    const n = await page.getByTestId('handoff-name').innerText();
-    await page.getByTestId('handoff-ready').click();
-    if (n === gf) await page.getByTestId('vote-skip').click();
-    else {
-      await page.getByTestId(`pick-${gf}`).click();
-      await page.getByTestId('confirm-vote').click();
+  const voteRound = async () => {
+    for (let i = 0; i < alive.length; i++) {
+      const n = await page.getByTestId('handoff-name').innerText();
+      await page.getByTestId('handoff-ready').click();
+      if (n === gf) await page.getByTestId('vote-skip').click();
+      else {
+        await page.getByTestId(`pick-${gf}`).click();
+        await page.getByTestId('confirm-vote').click();
+      }
     }
-  }
+  };
+  // first vote → the godfather has more than half → defense → final vote
+  await voteRound();
+  await expect(page.getByTestId('defendants')).toContainText(gf);
+  await shot(page, 'mafia-04-defense');
+  await page.getByTestId('start-final').click();
+  await voteRound();
   await expect(page.getByTestId('result-title')).toHaveText('شهروندها بردند!');
-  await shot(page, 'mafia-04-results');
+  await shot(page, 'mafia-05-results');
 });

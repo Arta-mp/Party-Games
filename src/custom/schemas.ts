@@ -31,14 +31,27 @@ export const NIGHT_ACTIONS = [
   'reveal',
   'swap',
   'convert',
+  /** bring a dead player back (Constantine) */
+  'revive',
+  /** learn how many of N players are mafia (Nostradamus) */
+  'predict',
+  /** if the target is mafia their role is revealed publicly and the actor dies (Citizen Kane) */
+  'expose',
+  /** give someone a gun they can fire once during the day (Gunner) */
+  'arm',
 ] as const;
-export const TARGETS = ['self', 'other', 'any', 'teammate'] as const;
+/** ownTeam = self or a teammate; dead = a dead player (revive) */
+export const TARGETS = ['self', 'other', 'any', 'teammate', 'ownTeam', 'dead'] as const;
 export const PASSIVES = [
   'bulletproof',
   'appearsInnocent',
   'appearsGuilty',
   'revengeKill',
   'immuneToBlock',
+  /** their lynch vote counts twice (Mayor) */
+  'doubleVote',
+  /** cannot be killed at night (Zodiac) */
+  'nightImmune',
 ] as const;
 export const DEFAULT_PRIORITY: Record<(typeof NIGHT_ACTIONS)[number], number> = {
   block: 10,
@@ -48,7 +61,11 @@ export const DEFAULT_PRIORITY: Record<(typeof NIGHT_ACTIONS)[number], number> = 
   kill: 35,
   convert: 45,
   investigate: 50,
+  predict: 52,
+  expose: 58,
   reveal: 60,
+  arm: 65,
+  revive: 70,
 };
 
 export const nightAbilitySchema = z.object({
@@ -58,8 +75,14 @@ export const nightAbilitySchema = z.object({
   uses: z.number().int().min(1).max(20).nullable().default(null),
   priority: z.number().int().min(0).max(100).optional(),
   fromNight: z.number().int().min(1).max(10).default(1),
-  /** team action (e.g. the mafia's shared kill): one decision for the whole team */
+  /** team action (e.g. the mafia's shot): only the highest-ranked living teammate decides */
   shared: z.boolean().default(false),
+  /** how many players are picked (predict: up to 3) */
+  targets: z.number().int().min(1).max(3).default(1),
+  /** usable every N nights (Zodiac shoots every other night) */
+  every: z.number().int().min(1).max(4).default(1),
+  /** arm: hand out a fake gun (blank rounds) instead of a real one */
+  fake: z.boolean().default(false),
 });
 export type NightAbility = z.infer<typeof nightAbilitySchema>;
 
@@ -77,8 +100,10 @@ export const abilityRoleSchema = z.object({
   passive: z.array(z.enum(PASSIVES)).default([]),
   knowsTeammates: z.boolean().default(false),
   onWrongKill: z.enum(['none', 'selfDies']).default('none'),
-  /** neutral roles only */
-  winCondition: z.enum(['team', 'survive', 'lynched']).default('team'),
+  /** neutral roles only: survive = alive at the end; lynched = jester; lastStanding = serial killer */
+  winCondition: z.enum(['team', 'survive', 'lynched', 'lastStanding']).default('team'),
+  /** leadership for shared team actions: the highest rank alive decides (godfather > others) */
+  rank: z.number().int().min(0).max(10).default(0),
   /** balance weight: positive helps the town, negative helps the mafia */
   weight: z.number().int().min(-10).max(10).default(0),
   descriptionFa: z.string().max(200).default(''),

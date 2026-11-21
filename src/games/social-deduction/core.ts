@@ -18,7 +18,8 @@ import { checkComposition, defaultComposition, type Composition } from './roles'
  * actions, lynch vote, win conditions. Roles are §7.3 data; nothing here knows a role by name.
  */
 export type MafiaKind = 'auto' | 'moderated' | 'werewolf' | 'onenight';
-export type Phase = 'reveal' | 'night' | 'dawn' | 'day' | 'vote' | 'revenge' | 'moderating' | 'over';
+export type Phase =
+  'reveal' | 'night' | 'dawn' | 'day' | 'vote' | 'defense' | 'final' | 'revenge' | 'moderating' | 'over';
 
 export const mafiaConfig = z.object({
   /** null = pick a sensible default for the player count */
@@ -27,7 +28,10 @@ export const mafiaConfig = z.object({
     .nullable()
     .default(null),
   daySeconds: z.number().int().min(0).max(1200).default(240),
-  revealOnDeath: z.boolean().default(true),
+  revealOnDeath: z.boolean().default(false),
+  /** Iranian style: players with at least half the votes defend themselves, then a final vote */
+  defense: z.boolean().default(true),
+  defenseSeconds: z.number().int().min(10).max(300).default(45),
   voteMode: z.enum(['secret', 'host']).default('secret'),
   /** host-overridable action priorities by role id (§7.3) */
   priorities: z.record(z.string(), z.number().int().min(0).max(100)).default({}),
@@ -40,7 +44,11 @@ export const mafiaAction = z.discriminatedUnion('type', [
     type: z.literal('night'),
     ability: z.number().int().min(-1).max(3),
     target: z.string().nullable(),
+    /** multi-target abilities (predict) */
+    targets: z.array(z.string()).max(3).optional(),
   }),
+  z.object({ type: z.literal('shoot'), target: z.string() }),
+  z.object({ type: z.literal('startFinal') }),
   z.object({ type: z.literal('continue') }),
   z.object({ type: z.literal('startVote') }),
   z.object({ type: z.literal('vote'), target: z.string() }),
@@ -54,6 +62,7 @@ export type MafiaAction = z.infer<typeof mafiaAction>;
 export interface NightChoice {
   ability: number; // -1 = sleep / nothing
   target: PlayerId | null;
+  targets?: PlayerId[];
 }
 
 export interface MafiaState {
@@ -78,14 +87,21 @@ export interface MafiaState {
     saved: number;
     revealed: { id: PlayerId; role: string }[];
     silenced: PlayerId[];
+    revived: PlayerId[];
   } | null;
   silenced: PlayerId[];
   endsAt: number | null;
   cfg: MafiaConfig;
   votes: Record<PlayerId, PlayerId>;
+  /** players on trial after the first vote (defense) */
+  defendants: PlayerId[];
+  firstTally: Record<string, number> | null;
+  /** guns handed out by the gunner: fired once during the day */
+  guns: Record<PlayerId, 'real' | 'fake'>;
+  dayShots: { by: PlayerId; target: PlayerId; died: boolean }[];
   lastLynch: { id: PlayerId | null; role: string | null; tally: Record<string, number> } | null;
   revengeBy: PlayerId | null;
-  afterRevenge: 'night' | 'day' | null;
+  afterRevenge: 'night' | 'dawn' | 'day' | null;
   winner: { team: 'citizens' | 'mafia' | 'neutral'; solo: PlayerId | null; reason: string } | null;
   log: Msg[];
 }
@@ -114,12 +130,43 @@ export function availableAbilities(
       const usesLeft = ability.uses == null ? null : ability.uses - used;
       return { index, ability, usesLeft };
     })
-    .filter(({ ability, usesLeft }) => ability.fromNight <= s.night && (usesLeft == null || usesLeft > 0));
+    .filter(
+      ({ ability, usesLeft }) =>
+        ability.fromNight <= s.night &&
+        (s.night - ability.fromNight) % ability.every === 0 &&
+        (usesLeft == null || usesLeft > 0) &&
+        (!ability.shared || isTeamLeader(s, p, ability.action)) &&
+        (ability.target !== 'dead' || Object.keys(s.assign).some((d) => !s.alive.includes(d))),
+    );
+}
+
+/**
+ * Shared team actions (the mafia shot): if a living holder has a rank (godfather 3, nato 2, others 1),
+ * only the highest-ranked one decides; equal ranks fall back to the player id. Rank-less teams
+ * (werewolves) decide together by plurality.
+ */
+export function teamLeader(s: MafiaState, team: string, action: string): PlayerId | null {
+  const holders = s.alive.filter((p) => {
+    const r = roleOf(s, p);
+    return r.team === team && r.night.some((a) => a.shared && a.action === action);
+  });
+  const ranked = holders.filter((p) => roleOf(s, p).rank > 0);
+  if (!ranked.length) return null;
+  return [...ranked].sort((a, b) => roleOf(s, b).rank - roleOf(s, a).rank || a.localeCompare(b))[0]!;
+}
+
+function isTeamLeader(s: MafiaState, p: PlayerId, action: string): boolean {
+  const leader = teamLeader(s, roleOf(s, p).team, action);
+  return leader == null || leader === p;
 }
 
 export function validTarget(s: MafiaState, actor: PlayerId, ab: NightAbility, target: PlayerId): boolean {
+  if (!s.assign[target]) return false;
+  if (ab.target === 'dead') return !s.alive.includes(target);
   if (!s.alive.includes(target)) return false;
   switch (ab.target) {
+    case 'ownTeam':
+      return target === actor || roleOf(s, target).team === roleOf(s, actor).team;
     case 'self':
       return target === actor;
     case 'other':
@@ -196,6 +243,10 @@ export function setupMafia(
     endsAt: null,
     cfg,
     votes: {},
+    defendants: [],
+    firstTally: null,
+    guns: {},
+    dayShots: [],
     lastLynch: null,
     revengeBy: null,
     afterRevenge: null,
@@ -229,7 +280,19 @@ interface Act {
   index: number;
   ab: NightAbility;
   target: PlayerId;
+  targets: PlayerId[];
   prio: number;
+}
+
+/** plain role = no night action and no passive: the only kind a negotiator can recruit */
+const isPlain = (r: AbilityRole) => r.night.length === 0 && r.passive.length === 0 && r.team === 'citizens';
+
+function looksGuilty(r: AbilityRole) {
+  return r.passive.includes('appearsInnocent')
+    ? false
+    : r.passive.includes('appearsGuilty')
+      ? true
+      : r.team === 'mafia';
 }
 
 export function resolveNight(s: MafiaState) {
@@ -241,7 +304,16 @@ export function resolveNight(s: MafiaState) {
     const role = roleOf(s, actor);
     const ab = role.night[ch.ability];
     if (!ab || !validTarget(s, actor, ab, ch.target)) continue;
-    const act: Act = { actor, role, index: ch.ability, ab, target: ch.target, prio: priorityOf(s, role, ab) };
+    const targets = (ch.targets?.length ? ch.targets : [ch.target]).slice(0, ab.targets);
+    const act: Act = {
+      actor,
+      role,
+      index: ch.ability,
+      ab,
+      target: ch.target,
+      targets,
+      prio: priorityOf(s, role, ab),
+    };
     if (ab.shared) {
       const key = `${role.team}:${ab.action}`;
       const g = shared.get(key) ?? { votes: {}, reps: [] };
@@ -262,6 +334,7 @@ export function resolveNight(s: MafiaState) {
   const protectedSet = new Set<PlayerId>();
   const killed = new Map<PlayerId, PlayerId>(); // victim → killer
   const revealed: { id: PlayerId; role: string }[] = [];
+  const revived: PlayerId[] = [];
   let saved = 0;
   for (const a of acts) {
     if (blocked.has(a.actor) && !a.role.passive.includes('immuneToBlock')) {
@@ -294,6 +367,10 @@ export function resolveNight(s: MafiaState) {
         break;
       }
       case 'kill':
+        if (targetRole.passive.includes('nightImmune')) {
+          saved++;
+          break;
+        }
         if (protectedSet.has(a.target)) {
           saved++;
           break;
@@ -308,8 +385,16 @@ export function resolveNight(s: MafiaState) {
           killed.set(a.actor, a.actor);
         break;
       case 'convert': {
-        const mafiaRole = s.roles.find((r) => r.team === a.role.team && r.id !== a.role.id) ?? a.role;
-        if (targetRole.team !== a.role.team) {
+        const mafiaRole =
+          s.roles.find((r) => r.team === a.role.team && r.id === 'mafia') ??
+          s.roles.find((r) => r.team === a.role.team && r.id !== a.role.id) ??
+          a.role;
+        if (!isPlain(targetRole)) {
+          note(s, a.actor, { k: 'mafia.note.convertFailed', p: { name: name(s, a.target) } });
+          break;
+        }
+        if (!s.roles.some((r) => r.id === mafiaRole.id)) s.roles.push(mafiaRole);
+        {
           s.assign[a.target] = mafiaRole.id;
           note(s, a.target, { k: 'mafia.note.converted', p: { role: mafiaRole.nameFa } });
         }
@@ -323,11 +408,7 @@ export function resolveNight(s: MafiaState) {
           });
           break;
         }
-        const guilty = targetRole.passive.includes('appearsInnocent')
-          ? false
-          : targetRole.passive.includes('appearsGuilty')
-            ? true
-            : targetRole.team === 'mafia';
+        const guilty = looksGuilty(targetRole);
         note(s, a.actor, {
           k: guilty ? 'mafia.note.guilty' : 'mafia.note.innocent',
           p: { name: name(s, a.target) },
@@ -337,15 +418,44 @@ export function resolveNight(s: MafiaState) {
       case 'reveal':
         revealed.push({ id: a.target, role: targetRole.nameFa });
         break;
+      case 'expose':
+        // only a real mafia is exposed, and exposing costs the actor their life
+        if (targetRole.team === 'mafia') {
+          revealed.push({ id: a.target, role: targetRole.nameFa });
+          killed.set(a.actor, a.actor);
+        } else note(s, a.actor, { k: 'mafia.note.notMafia', p: { name: name(s, a.target) } });
+        break;
+      case 'predict': {
+        const n = a.targets.filter((t) => s.assign[t] && looksGuilty(roleOf(s, t))).length;
+        note(s, a.actor, {
+          k: 'mafia.note.predict',
+          p: { names: a.targets.map((t) => name(s, t)).join('، '), n },
+        });
+        break;
+      }
+      case 'arm':
+        s.guns[a.target] = a.ab.fake ? 'fake' : 'real';
+        note(s, a.target, { k: 'mafia.note.gotGun' });
+        break;
+      case 'revive':
+        revived.push(a.target);
+        break;
     }
   }
   const victims = [...killed.keys()].filter((v) => s.alive.includes(v));
   s.alive = s.alive.filter((p) => !victims.includes(p));
+  for (const r of revived) {
+    if (!s.alive.includes(r)) {
+      s.alive.push(r);
+      note(s, r, { k: 'mafia.note.revived' });
+    }
+  }
   s.dawn = {
     killed: victims.map((id) => ({ id, role: s.cfg.revealOnDeath ? roleOf(s, id).nameFa : null })),
     saved,
     revealed,
     silenced: [...s.silenced],
+    revived,
   };
   s.log.push({
     k: 'mafia.log.night',
@@ -358,10 +468,24 @@ export function resolveNight(s: MafiaState) {
 
 export function checkWin(s: MafiaState): MafiaState['winner'] {
   const mafia = s.alive.filter((p) => teamOf(s, p) === 'mafia').length;
+  // independent serial killers (Zodiac) are a third side: nobody else wins while they live
+  const killers = s.alive.filter((p) => roleOf(s, p).winCondition === 'lastStanding');
   const rest = s.alive.length - mafia;
+  if (killers.length === 1 && s.alive.length <= 2)
+    return { team: 'neutral', solo: killers[0]!, reason: 'mafia.reason.lastStanding' };
+  if (killers.length > 0) return null;
   if (mafia === 0) return { team: 'citizens', solo: null, reason: 'mafia.reason.allMafiaGone' };
   if (mafia >= rest) return { team: 'mafia', solo: null, reason: 'mafia.reason.outnumber' };
   return null;
+}
+
+/** lynch-vote weight (the mayor's vote counts twice) */
+const voteWeight = (s: MafiaState, p: PlayerId) => (roleOf(s, p).passive.includes('doubleVote') ? 2 : 1);
+
+function weightedTally(s: MafiaState): Record<string, number> {
+  const t: Record<string, number> = {};
+  for (const [voter, target] of Object.entries(s.votes)) t[target] = (t[target] ?? 0) + voteWeight(s, voter);
+  return t;
 }
 
 function finish(s: MafiaState, w: NonNullable<MafiaState['winner']>) {
@@ -370,7 +494,7 @@ function finish(s: MafiaState, w: NonNullable<MafiaState['winner']>) {
   s.endsAt = null;
 }
 
-function onDeaths(s: MafiaState, dead: PlayerId[], next: 'night' | 'day'): boolean {
+function onDeaths(s: MafiaState, dead: PlayerId[], next: 'night' | 'dawn' | 'day'): boolean {
   const hunter = dead.find((d) => roleOf(s, d).passive.includes('revengeKill'));
   if (hunter && s.alive.length > 0) {
     s.phase = 'revenge';
@@ -384,6 +508,8 @@ function onDeaths(s: MafiaState, dead: PlayerId[], next: 'night' | 'day'): boole
 function startDay(s: MafiaState, now: number) {
   s.phase = 'day';
   s.votes = {};
+  s.defendants = [];
+  s.firstTally = null;
   s.endsAt = s.cfg.daySeconds > 0 ? now + s.cfg.daySeconds * 1000 : null;
 }
 
@@ -428,11 +554,25 @@ function lynch(
 }
 
 function tallyVotes(s: MafiaState, now: number): MafiaState {
-  const t: Record<string, number> = {};
-  for (const v of Object.values(s.votes)) t[v] = (t[v] ?? 0) + 1;
-  const max = Math.max(...Object.values(t));
-  const top = Object.keys(t).filter((k) => t[k] === max);
-  const target = top.length === 1 && top[0] !== SKIP ? top[0]! : null;
+  const t = weightedTally(s);
+  if (s.phase === 'vote' && s.cfg.defense && s.kind !== 'onenight') {
+    // first round: anyone with at least half of the living players' votes goes on trial
+    const need = Math.ceil(s.alive.length / 2);
+    const accused = Object.keys(t).filter((k) => k !== SKIP && t[k]! >= need);
+    s.firstTally = t;
+    s.votes = {};
+    if (accused.length === 0) return lynch(s, null, t, now);
+    s.defendants = accused;
+    s.phase = 'defense';
+    s.endsAt = now + s.cfg.defenseSeconds * 1000 * accused.length;
+    return s;
+  }
+  const pool = Object.keys(t).filter((k) => k !== SKIP && (s.phase !== 'final' || s.defendants.includes(k)));
+  const max = Math.max(0, ...pool.map((k) => t[k]!));
+  const top = pool.filter((k) => t[k] === max);
+  const skipWins = (t[SKIP] ?? 0) > max;
+  const target = top.length === 1 && max > 0 && !skipWins ? top[0]! : null;
+  s.defendants = [];
   return lynch(s, target, t, now);
 }
 
@@ -461,14 +601,21 @@ export function reduceMafia(
       if (action.ability >= 0) {
         const av = availableAbilities(s, actor).find((a) => a.index === action.ability);
         if (!av || !action.target || !validTarget(s, actor, av.ability, action.target)) return state;
+        const extra = action.targets ?? [];
+        if (extra.length > av.ability.targets || new Set(extra).size !== extra.length) return state;
+        if (extra.some((t) => !validTarget(s, actor, av.ability, t))) return state;
       }
-      s.choices[actor] = { ability: action.ability, target: action.ability >= 0 ? action.target : null };
+      s.choices[actor] = {
+        ability: action.ability,
+        target: action.ability >= 0 ? action.target : null,
+        ...(action.ability >= 0 && action.targets?.length ? { targets: action.targets } : {}),
+      };
       if (s.alive.every((p) => s.choices[p])) {
         const dead = resolveNight(s);
         s.phase = 'dawn';
         const w = s.kind === 'onenight' ? null : checkWin(s);
         if (w) finish(s, w);
-        else if (s.kind !== 'onenight' && onDeaths(s, dead, 'day')) {
+        else if (s.kind !== 'onenight' && onDeaths(s, dead, 'dawn')) {
           /* hunter shoots first */
         }
       }
@@ -480,9 +627,50 @@ export function reduceMafia(
       return s;
     }
     case '$timeout': {
+      if (s.phase === 'defense') {
+        s.phase = 'final';
+        s.endsAt = null;
+        s.votes = {};
+        return s;
+      }
       if (s.phase !== 'day') return state;
       s.phase = 'vote';
       s.endsAt = null;
+      return s;
+    }
+    case 'startFinal': {
+      if (s.phase !== 'defense' || !hostOk(s, actor)) return state;
+      s.phase = 'final';
+      s.endsAt = null;
+      s.votes = {};
+      return s;
+    }
+    case 'shoot': {
+      // a gun from the gunner: one shot during the day; holders don't know if it's real
+      if (s.phase !== 'day' || !s.alive.includes(actor) || !s.guns[actor]) return state;
+      if (!s.alive.includes(action.target) || action.target === actor) return state;
+      const real = s.guns[actor] === 'real';
+      delete s.guns[actor];
+      const tr = roleOf(s, action.target);
+      let died = false;
+      if (real) {
+        if (tr.passive.includes('bulletproof') && !s.bulletproofUsed.includes(action.target))
+          s.bulletproofUsed.push(action.target);
+        else {
+          died = true;
+          s.alive = s.alive.filter((p) => p !== action.target);
+          s.log.push({ k: 'mafia.log.shot', p: { name: name(s, action.target) } });
+        }
+      }
+      s.dayShots.push({ by: actor, target: action.target, died });
+      if (died) {
+        const w = checkWin(s);
+        if (w) {
+          finish(s, w);
+          return s;
+        }
+        onDeaths(s, [action.target], 'day');
+      }
       return s;
     }
     case 'startVote': {
@@ -492,17 +680,20 @@ export function reduceMafia(
       return s;
     }
     case 'vote': {
-      if (s.phase !== 'vote' || s.cfg.voteMode !== 'secret' || !s.alive.includes(actor) || s.votes[actor])
-        return state;
+      if ((s.phase !== 'vote' && s.phase !== 'final') || s.cfg.voteMode !== 'secret') return state;
+      if (!s.alive.includes(actor) || s.votes[actor]) return state;
       if (action.target !== SKIP && (!s.alive.includes(action.target) || action.target === actor))
+        return state;
+      if (s.phase === 'final' && action.target !== SKIP && !s.defendants.includes(action.target))
         return state;
       s.votes[actor] = action.target;
       if (s.alive.every((p) => s.votes[p])) return tallyVotes(s, now);
       return s;
     }
     case 'hostLynch': {
-      if (s.phase !== 'vote' || !hostOk(s, actor)) return state;
+      if ((s.phase !== 'vote' && s.phase !== 'final') || !hostOk(s, actor)) return state;
       if (action.target && !s.alive.includes(action.target)) return state;
+      s.defendants = [];
       return lynch(s, action.target, {}, now);
     }
     case 'revenge': {
@@ -525,7 +716,8 @@ export function reduceMafia(
         finish(s, w);
         return s;
       }
-      if (s.afterRevenge === 'day') s.phase = 'dawn';
+      if (s.afterRevenge === 'dawn') s.phase = 'dawn';
+      else if (s.afterRevenge === 'day') s.phase = 'day';
       else startNight(s);
       return s;
     }
@@ -563,6 +755,11 @@ export interface MafiaView {
   dawn: MafiaState['dawn'];
   lastLynch: MafiaState['lastLynch'];
   revengeBy: PlayerId | null;
+  defense: boolean;
+  defendants: PlayerId[];
+  /** first-round vote counts (public, Iranian style) */
+  firstTally: Record<string, number> | null;
+  dayShots: MafiaState['dayShots'];
   /** roles of the dead, if the host reveals them */
   deadRoles: { id: PlayerId; role: string }[];
   me: {
@@ -573,8 +770,12 @@ export interface MafiaView {
       index: number;
       action: NightAbility['action'];
       target: NightAbility['target'];
+      targets: number;
       usesLeft: number | null;
     }[];
+    /** who decides the team's shared action (godfather); null if not applicable */
+    leader: PlayerId | null;
+    hasGun: boolean;
     choice: NightChoice | null;
     teamPicks: { id: PlayerId; target: PlayerId | null }[];
     silenced: boolean;
@@ -614,6 +815,10 @@ export function viewMafia(s: MafiaState, viewer: PlayerId | 'public'): MafiaView
     dawn: s.phase === 'night' ? null : s.dawn,
     lastLynch: s.lastLynch,
     revengeBy: s.revengeBy,
+    defense: s.cfg.defense && s.kind !== 'onenight',
+    defendants: s.defendants,
+    firstTally: s.phase === 'defense' || s.phase === 'final' ? s.firstTally : null,
+    dayShots: s.dayShots,
     deadRoles:
       s.cfg.revealOnDeath && s.kind !== 'moderated'
         ? dead.map((id) => ({ id, role: roleOf(s, id).nameFa }))
@@ -634,8 +839,11 @@ export function viewMafia(s: MafiaState, viewer: PlayerId | 'public'): MafiaView
               index: a.index,
               action: a.ability.action,
               target: a.ability.target,
+              targets: a.ability.targets,
               usesLeft: a.usesLeft,
             })),
+            leader: role.team === 'mafia' ? teamLeader(s, role.team, 'kill') : null,
+            hasGun: !!s.guns[viewer as PlayerId] && s.alive.includes(viewer as PlayerId),
             choice: s.choices[viewer as PlayerId] ?? null,
             teamPicks:
               s.phase === 'night'
@@ -644,6 +852,7 @@ export function viewMafia(s: MafiaState, viewer: PlayerId | 'public'): MafiaView
                     .map((m) => {
                       const c = s.choices[m];
                       const ab = c && c.ability >= 0 ? roleOf(s, m).night[c.ability] : null;
+                      // only the shared shot is visible to teammates
                       return { id: m, target: ab?.shared ? c!.target : null };
                     })
                 : [],
@@ -735,7 +944,8 @@ export function resultMafia(s: MafiaState): GameResult | null {
 export function pendingMafia(s: MafiaState): PlayerId[] {
   if (s.phase === 'reveal') return Object.keys(s.assign).filter((p) => !s.acked.includes(p));
   if (s.phase === 'night') return s.alive.filter((p) => !s.choices[p]);
-  if (s.phase === 'vote' && s.cfg.voteMode === 'secret') return s.alive.filter((p) => !s.votes[p]);
+  if ((s.phase === 'vote' || s.phase === 'final') && s.cfg.voteMode === 'secret')
+    return s.alive.filter((p) => !s.votes[p]);
   if (s.phase === 'revenge' && s.revengeBy) return [s.revengeBy];
   return [];
 }

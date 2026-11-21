@@ -35,9 +35,16 @@ function night(d: Driver, choices: Record<string, { ability?: number; target: st
 }
 function voteOut(d: Driver, target: string | null) {
   d.act('p1', { type: 'startVote' });
-  const voters = [...S(d).alive];
-  for (const p of voters)
-    if (S(d).phase === 'vote') d.act(p, { type: 'vote', target: target && p !== target ? target : SKIP });
+  const cast = () => {
+    for (const p of [...S(d).alive])
+      if (S(d).phase === 'vote' || S(d).phase === 'final')
+        d.act(p, { type: 'vote', target: target && p !== target ? target : SKIP });
+  };
+  cast();
+  if (S(d).phase === 'defense') {
+    d.act('p1', { type: 'startFinal' });
+    cast();
+  }
 }
 
 describe('roles & composition (§7.3, §7.4)', () => {
@@ -122,7 +129,10 @@ describe('mafia.auto (app is the moderator)', () => {
   });
 
   it('kill succeeds without protection; dead players are revealed; day timer then vote', () => {
-    const d = new Driver(mafiaAuto, makePlayers(6), cfg(comp(['mafia', 1], ['detective', 1])));
+    const d = new Driver(mafiaAuto, makePlayers(6), {
+      ...cfg(comp(['mafia', 1], ['detective', 1])),
+      revealOnDeath: true,
+    });
     ackAll(d);
     const m = one(d, 'mafia');
     const det = one(d, 'detective');
@@ -161,12 +171,42 @@ describe('mafia.auto (app is the moderator)', () => {
     expect(d.result()?.highlights?.map((h) => h.key)).toEqual(['mafia-win', 'mafia-win']);
   });
 
-  it('shared team kill uses the plurality of picks', () => {
-    const d = new Driver(mafiaAuto, makePlayers(9), cfg(comp(['mafia', 3])));
+  it('only the top-ranked mafia decides the shot (godfather), the rest only see it', () => {
+    const d = new Driver(mafiaAuto, makePlayers(9), cfg(comp(['godfather', 1], ['mafia', 2])));
     ackAll(d);
+    const gf = one(d, 'godfather');
     const ms = who(d, 'mafia');
-    const [a, b] = who(d, 'citizen');
-    night(d, { [ms[0]!]: { target: a! }, [ms[1]!]: { target: b! }, [ms[2]!]: { target: b! } });
+    expect((d.view(ms[0]!) as MafiaView).me?.abilities).toEqual([]);
+    expect((d.view(ms[0]!) as MafiaView).me?.leader).toBe(gf);
+    expect((d.view(gf) as MafiaView).me?.abilities.map((a) => a.action)).toEqual(['kill']);
+    d.noop(ms[0]!, { type: 'night', ability: 0, target: who(d, 'citizen')[0]! });
+    const victim = who(d, 'citizen')[1]!;
+    night(d, { [gf]: { target: victim } });
+    expect(S(d).alive).not.toContain(victim);
+  });
+
+  it('when the godfather dies, the next mafia takes over the shot', () => {
+    const d = new Driver(mafiaAuto, makePlayers(9), cfg(comp(['godfather', 1], ['mafia', 2])));
+    ackAll(d);
+    const gf = one(d, 'godfather');
+    night(d, {});
+    d.act('p1', { type: 'continue' });
+    voteOut(d, gf);
+    const next = (d.view(who(d, 'mafia')[0]!) as MafiaView).me?.leader;
+    expect(next && who(d, 'mafia').includes(next)).toBe(true);
+    expect((d.view(next!) as MafiaView).me?.abilities.map((a) => a.action)).toEqual(['kill']);
+  });
+
+  it('werewolves (no ranks) still decide by plurality', () => {
+    const c: Composition = [
+      { role: W.werewolf, n: 3 },
+      { role: W.villager, n: 0 },
+    ];
+    const d = new Driver(werewolf, makePlayers(9), { ...werewolf.defaultConfig, composition: c });
+    ackAll(d);
+    const ws = who(d, 'werewolf');
+    const [a, b] = who(d, 'villager');
+    night(d, { [ws[0]!]: { target: a! }, [ws[1]!]: { target: b! }, [ws[2]!]: { target: b! } });
     expect(S(d).alive).toContain(a);
     expect(S(d).alive).not.toContain(b);
   });
@@ -380,5 +420,257 @@ describe('mafia.moderated', () => {
     expect(S(d).alive).not.toContain('p2');
     d.act('p1', { type: 'modEnd', team: 'citizens' });
     expect(d.result()?.title.k).toBe('mafia.result.citizens');
+  });
+});
+
+// ------------------------------------------------------------------ redesign: defense vote, new roles, scenarios
+import { SCENARIOS, SCENARIO_ROLES as SR, scenarioComposition } from './roles';
+
+describe('defense + final vote (Iranian style)', () => {
+  const setup = (n = 6, extra: Composition = []) => {
+    const d = new Driver(mafiaAuto, makePlayers(n), {
+      ...mafiaAuto.defaultConfig,
+      composition: [{ role: R.mafia, n: 1 }, ...extra],
+    });
+    ackAll(d);
+    night(d, {});
+    d.act('p1', { type: 'continue' });
+    d.act('p1', { type: 'startVote' });
+    return d;
+  };
+  it('players with at least half the votes go on trial, defend (timed), then a final vote decides', () => {
+    const d = setup(6);
+    const alive = [...S(d).alive];
+    const [x, y] = alive;
+    // 3 of 6 vote x (= half), 3 vote y → both on trial
+    // x→y, y→x, then two vote x and two vote y: 3 each
+    alive.forEach((p, i) =>
+      d.act(p, { type: 'vote', target: i === 0 ? y! : i === 1 ? x! : i < 4 ? x! : y! }),
+    );
+    expect(S(d).phase).toBe('defense');
+    expect(S(d).defendants.sort()).toEqual([x, y].sort());
+    expect((d.view('p3') as MafiaView).firstTally).not.toBeNull();
+    expect(S(d).endsAt).toBe(d.now + 45_000 * 2);
+    d.advance(90_000);
+    expect(S(d).phase).toBe('final');
+    expect(d.pending()).toHaveLength(6);
+    d.noop(alive[2]!, { type: 'vote', target: alive[3]! }); // not a defendant
+    for (const p of alive) d.act(p, { type: 'vote', target: p === x ? y! : x! });
+    expect(S(d).lastLynch?.id).toBe(x);
+  });
+  it('nobody reaching half → nobody is tried, night falls', () => {
+    const d = setup(6);
+    const alive = [...S(d).alive];
+    alive.forEach((p, i) => d.act(p, { type: 'vote', target: alive[(i + 1) % alive.length]! }));
+    expect(S(d).phase).toBe('night');
+    expect(S(d).lastLynch?.id).toBeNull();
+  });
+  it("the mayor's vote counts twice", () => {
+    const d = setup(6, [{ role: R.mayor, n: 1 }]);
+    const mayor = one(d, 'mayor');
+    const others = S(d).alive.filter((p) => p !== mayor);
+    const target = others[0]!;
+    // mayor (2) + one more (1) = 3 ≥ half of 6 → trial with only 2 voters
+    d.act(mayor, { type: 'vote', target });
+    d.act(others[1]!, { type: 'vote', target });
+    for (const p of S(d).alive) if (!S(d).votes[p]) d.act(p, { type: 'vote', target: SKIP });
+    expect(S(d).defendants).toEqual([target]);
+  });
+  it('roles stay hidden on death by default', () => {
+    expect(mafiaAuto.defaultConfig.revealOnDeath).toBe(false);
+    const d = setup(6);
+    const victim = who(d, 'citizen')[0]!;
+    d.act('p1', { type: 'hostLynch', target: null });
+    night(d, { [one(d, 'mafia')]: { target: victim } });
+    expect((d.view('public') as MafiaView).dawn?.killed).toEqual([{ id: victim, role: null }]);
+    expect(JSON.stringify(d.view(who(d, 'citizen')[1]!))).not.toContain('شهروند ساده"}');
+  });
+});
+
+describe('new roles', () => {
+  const start = (c: Composition, n = 9) => {
+    const d = new Driver(mafiaAuto, makePlayers(n), {
+      ...mafiaAuto.defaultConfig,
+      composition: c,
+      revealOnDeath: true,
+    });
+    ackAll(d);
+    return d;
+  };
+  it('Dr. Lecter saves a mafia member from the sniper/professional', () => {
+    const d = start([
+      { role: R.godfather, n: 1 },
+      { role: R.drLecter, n: 1 },
+      { role: R.professional, n: 1 },
+    ]);
+    const gf = one(d, 'godfather');
+    const lecter = one(d, 'dr-lecter');
+    expect((d.view(lecter) as MafiaView).me?.abilities.map((a) => a.action)).toEqual(['protect']);
+    night(d, { [lecter]: { target: gf }, [one(d, 'professional')]: { target: gf } });
+    expect(S(d).alive).toContain(gf);
+  });
+  it('professional shoots every night; shooting a citizen kills himself', () => {
+    const d = start([
+      { role: R.godfather, n: 1 },
+      { role: R.professional, n: 1 },
+    ]);
+    const pro = one(d, 'professional');
+    night(d, { [pro]: { target: who(d, 'citizen')[0]! } });
+    expect(S(d).alive).not.toContain(pro);
+  });
+  it('negotiator recruits only a plain citizen (once, from night 2)', () => {
+    const d = start([
+      { role: R.godfather, n: 1 },
+      { role: R.negotiator, n: 1 },
+      { role: R.doctor, n: 1 },
+    ]);
+    const neg = one(d, 'negotiator');
+    expect((d.view(neg) as MafiaView).me?.abilities.map((a) => a.action)).toEqual([]);
+    night(d, {});
+    d.act('p1', { type: 'continue' });
+    voteOut(d, null);
+    const doc = one(d, 'doctor');
+    night(d, { [neg]: { ability: 0, target: doc } });
+    expect(roleOf(S(d), doc).id).toBe('doctor');
+    expect((d.view(neg) as MafiaView).me?.notes.at(-1)?.k).toBe('mafia.note.convertFailed');
+  });
+});
+
+describe('scenario roles & new actions', () => {
+  const start = (c: Composition, n = 9) => {
+    const d = new Driver(mafiaAuto, makePlayers(n), { ...mafiaAuto.defaultConfig, composition: c });
+    ackAll(d);
+    return d;
+  };
+  it('Citizen Kane: exposing a mafia reveals them publicly and Kane dies; a citizen only tells Kane', () => {
+    const d = start([
+      { role: R.godfather, n: 1 },
+      { role: SR.kane, n: 1 },
+    ]);
+    const kane = one(d, 'kane');
+    const gf = one(d, 'godfather');
+    night(d, { [kane]: { target: gf } });
+    expect((d.view('public') as MafiaView).dawn?.revealed).toEqual([{ id: gf, role: 'پدرخوانده' }]);
+    expect(S(d).alive).not.toContain(kane);
+    const d2 = start([
+      { role: R.godfather, n: 1 },
+      { role: SR.kane, n: 1 },
+    ]);
+    const k2 = one(d2, 'kane');
+    night(d2, { [k2]: { target: who(d2, 'citizen')[0]! } });
+    expect((d2.view('public') as MafiaView).dawn?.revealed).toEqual([]);
+    expect((d2.view(k2) as MafiaView).me?.notes.at(-1)?.k).toBe('mafia.note.notMafia');
+  });
+  it('Constantine revives a dead player once', () => {
+    const d = start([
+      { role: R.godfather, n: 1 },
+      { role: SR.constantine, n: 1 },
+    ]);
+    const con = one(d, 'constantine');
+    expect((d.view(con) as MafiaView).me?.abilities).toEqual([]); // nobody dead yet
+    const victim = who(d, 'citizen')[0]!;
+    night(d, { [one(d, 'godfather')]: { target: victim } });
+    d.act('p1', { type: 'continue' });
+    voteOut(d, null);
+    expect((d.view(con) as MafiaView).me?.abilities.map((a) => a.target)).toEqual(['dead']);
+    d.noop(con, { type: 'night', ability: 0, target: who(d, 'citizen')[1]! }); // alive: invalid
+    night(d, { [con]: { target: victim } });
+    expect(S(d).alive).toContain(victim);
+    expect((d.view('public') as MafiaView).dawn?.revived).toEqual([victim]);
+  });
+  it('Nostradamus picks 3 players and learns how many are mafia', () => {
+    const d = start([
+      { role: R.godfather, n: 1 },
+      { role: R.mafia, n: 1 },
+      { role: SR.nostradamus, n: 1 },
+    ]);
+    const nos = one(d, 'nostradamus');
+    const picks = [one(d, 'mafia'), ...who(d, 'citizen').slice(0, 2)];
+    expect((d.view(nos) as MafiaView).me?.abilities[0]?.targets).toBe(3);
+    d.act(nos, { type: 'night', ability: 0, target: picks[0]!, targets: picks });
+    night(d, {});
+    expect((d.view(nos) as MafiaView).me?.notes.at(-1)).toMatchObject({
+      k: 'mafia.note.predict',
+      p: { n: 1 },
+    });
+  });
+  it('Gunner arms a player; the day shot kills only with a real gun', () => {
+    const d = start([
+      { role: R.godfather, n: 1 },
+      { role: SR.gunner, n: 1 },
+    ]);
+    const gunner = one(d, 'gunner');
+    const [holder, fakeHolder] = who(d, 'citizen');
+    night(d, { [gunner]: { ability: 0, target: holder! } });
+    d.act('p1', { type: 'continue' });
+    expect((d.view(holder!) as MafiaView).me?.hasGun).toBe(true);
+    expect(JSON.stringify(d.view(holder!))).not.toContain('"real"'); // holder can't tell
+    const gf = one(d, 'godfather');
+    d.act(holder!, { type: 'shoot', target: gf });
+    expect(d.result()?.title.k).toBe('mafia.result.citizens');
+    // fake gun
+    const d2 = start([
+      { role: R.godfather, n: 1 },
+      { role: SR.gunner, n: 1 },
+    ]);
+    const g2 = one(d2, 'gunner');
+    const h2 = who(d2, 'citizen')[0]!;
+    night(d2, { [g2]: { ability: 1, target: h2 } });
+    d2.act('p1', { type: 'continue' });
+    d2.act(h2, { type: 'shoot', target: one(d2, 'godfather') });
+    expect(S(d2).alive).toContain(one(d2, 'godfather'));
+    expect(S(d2).dayShots).toEqual([{ by: h2, target: one(d2, 'godfather'), died: false }]);
+    d2.noop(h2, { type: 'shoot', target: one(d2, 'godfather') }); // one bullet
+    void fakeHolder;
+  });
+  it('Zodiac: shoots every other night, immune at night, wins when alone with one player', () => {
+    const d = start(
+      [
+        { role: R.godfather, n: 1 },
+        { role: SR.zodiac, n: 1 },
+      ],
+      5,
+    );
+    const z = one(d, 'zodiac');
+    const gf = one(d, 'godfather');
+    expect((d.view(z) as MafiaView).me?.abilities).toHaveLength(1); // night 1
+    night(d, { [gf]: { target: z } });
+    expect(S(d).alive).toContain(z); // night immune
+    d.act('p1', { type: 'continue' });
+    voteOut(d, null);
+    expect((d.view(z) as MafiaView).me?.abilities).toHaveLength(0); // night 2: resting
+    // while the Zodiac lives, the mafia can't win by numbers
+    expect(S(d).winner).toBeNull();
+  });
+});
+
+describe('scenario presets', () => {
+  it('every built-in scenario is a valid composition from 10 players up', () => {
+    for (const sc of SCENARIOS) {
+      for (const n of [10, 12, 15]) {
+        const c = scenarioComposition(sc, n);
+        expect(checkComposition(c, n), `${sc.id}@${n}`).toBeNull();
+        expect(c.reduce((t, x) => t + x.n, 0)).toBe(n);
+      }
+    }
+  });
+  it('a scenario game starts and deals its roles', () => {
+    const sc = SCENARIOS.find((x) => x.id === 'godfather')!;
+    const d = new Driver(mafiaAuto, makePlayers(10), {
+      ...mafiaAuto.defaultConfig,
+      composition: scenarioComposition(sc, 10),
+    });
+    const ids = Object.values(S(d).assign);
+    for (const id of [
+      'godfather',
+      'matador',
+      'saul-goodman',
+      'watson',
+      'leon',
+      'kane',
+      'constantine',
+      'nostradamus',
+    ])
+      expect(ids).toContain(id);
   });
 });

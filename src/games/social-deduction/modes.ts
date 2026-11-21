@@ -34,7 +34,7 @@ function make(
     viewFor: viewMafia,
     result: resultMafia,
     pending: pendingMafia,
-    deadline: (s) => (s.phase === 'day' ? s.endsAt : null),
+    deadline: (s) => (s.phase === 'day' || s.phase === 'defense' ? s.endsAt : null),
     validate: (cfg, n) => {
       const meta = META[id];
       if (n < meta.minPlayers) return { k: 'err.minPlayers', p: { n: meta.minPlayers } };
