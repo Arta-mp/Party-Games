@@ -9,7 +9,11 @@ const S = (d: Driver) => d.state as WGState;
 
 describe('word-guess team core', () => {
   it('auto teams, alternating performers, correct/skip/score, timer ends the turn', () => {
-    const d = new Driver(charades, makePlayers(4), { ...charades.defaultConfig, turnSeconds: 30 });
+    const d = new Driver(charades, makePlayers(4), {
+      ...charades.defaultConfig,
+      turnSeconds: 30,
+      targetScore: 0,
+    });
     const s = S(d);
     expect(s.teams).toHaveLength(2);
     expect(s.teams.flat().sort()).toEqual(['p1', 'p2', 'p3', 'p4']);
@@ -40,7 +44,7 @@ describe('word-guess team core', () => {
   });
 
   it('full game ends after every player performed; result names the winning team', () => {
-    const d = new Driver(charades, makePlayers(4), { ...charades.defaultConfig });
+    const d = new Driver(charades, makePlayers(4), { ...charades.defaultConfig, targetScore: 0 });
     for (let i = 0; i < 4; i++) {
       const p = performerOf(S(d)).player;
       d.act(p, { type: 'start' });
@@ -106,7 +110,73 @@ describe('word-guess team core', () => {
   });
 });
 
+describe('manual teams & target score', () => {
+  it('host-assigned players keep their team; the rest are balanced', () => {
+    const manual = { p1: 0, p2: 0, p3: 1 };
+    for (let seed = 0; seed < 10; seed++) {
+      const d = new Driver(
+        charades,
+        makePlayers(6),
+        { ...charades.defaultConfig, manualTeams: manual },
+        { seed },
+      );
+      const [a, b] = S(d).teams;
+      expect(a).toEqual(expect.arrayContaining(['p1', 'p2']));
+      expect(b).toContain('p3');
+      expect(Math.abs(a!.length - b!.length)).toBeLessThanOrEqual(1);
+    }
+  });
+  it('the game ends at the end of the turn in which a team reaches the target', () => {
+    const d = new Driver(charades, makePlayers(4), { ...charades.defaultConfig, targetScore: 3 });
+    const p = performerOf(S(d)).player;
+    d.act(p, { type: 'start' });
+    for (let i = 0; i < 3; i++) d.act(p, { type: 'correct' });
+    expect(S(d).phase).toBe('turn'); // the turn still finishes
+    d.advance(60_000);
+    d.act(p, { type: 'next' });
+    expect(S(d).phase).toBe('over');
+    expect(d.result()!.winners).toEqual(
+      expect.arrayContaining(S(d).teams[performerOf({ ...S(d), turn: 0 }).team]!),
+    );
+  });
+  it('without reaching the target the game keeps going past one round', () => {
+    const d = new Driver(charades, makePlayers(4), { ...charades.defaultConfig, targetScore: 50 });
+    for (let i = 0; i < 6; i++) {
+      const p = performerOf(S(d)).player;
+      d.act(p, { type: 'start' });
+      d.advance(60_000);
+      d.act(p, { type: 'next' });
+    }
+    expect(S(d).phase).toBe('ready');
+  });
+});
+
 describe('word.drawing', () => {
+  it('hints: off / letter count / letters revealed at 50% and 75% of the time', async () => {
+    const { maskWord } = await import('./drawing');
+    expect(maskWord('سیب', 'none', [])).toBeNull();
+    expect(maskWord('سیب', 'length', [])).toBe('_ _ _');
+    expect(maskWord('سیب', 'letters', [1])).toBe('_ ی _');
+    const d = new Driver(drawing, makePlayers(3), {
+      ...drawing.defaultConfig,
+      hints: 'letters',
+      turnSeconds: 80,
+    });
+    const drawer = (d.state as DrawState).order[0]!;
+    const g = d.ids().find((p) => p !== drawer)!;
+    d.act(drawer, { type: 'start' });
+    const word = (d.state as DrawState).words[0]!;
+    expect((d.view(g) as DrawView).word).toBeNull(); // the guesser never gets the word itself
+    expect((d.state as DrawState).revealed).toEqual([]);
+    d.advance(40_000);
+    expect((d.state as DrawState).revealed).toHaveLength(1);
+    d.advance(20_000);
+    expect((d.state as DrawState).revealed).toHaveLength(word.replace(/[ \u200c]/g, '').length > 2 ? 2 : 1);
+    expect((d.state as DrawState).phase).toBe('draw');
+    d.advance(20_000);
+    expect((d.state as DrawState).phase).toBe('reveal');
+  });
+
   it('stroke codec round-trips within quantisation error and simplify shrinks strokes', () => {
     const pts: [number, number][] = Array.from({ length: 50 }, (_, i) => [i / 49, Math.sin(i / 8) / 2 + 0.5]);
     const d = encodePoints(pts);

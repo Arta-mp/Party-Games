@@ -16,6 +16,7 @@ import {
   Stepper,
   TextField,
   Timer,
+  Segmented,
   Toggle,
 } from '@/ui/kit';
 import {
@@ -40,6 +41,15 @@ export function DrawingSetup({ config, onChange }: SetupProps<DrawConfig>) {
         hint={t('draw.cfg.canvasHint')}
         checked={config.canvas}
         onChange={(canvas) => onChange({ ...config, canvas })}
+      />
+      <Segmented
+        label={t('draw.cfg.hints')}
+        value={config.hints}
+        onChange={(hints) => onChange({ ...config, hints })}
+        options={(['none', 'length', 'letters'] as const).map((v) => ({
+          value: v,
+          label: t(`draw.hints.${v}`),
+        }))}
       />
       <Stepper
         label={t('wg.cfg.turn')}
@@ -219,8 +229,12 @@ export function DrawingPlay({ view, dispatch, me, isHost, now }: PlayProps<DrawV
               )
             ) : (
               <p className="text-center text-lg font-bold">
-                {t('draw.guessWhat', { name: name(view.drawer) })}{' '}
-                <span className="ltr text-muted">{'_ '.repeat(view.wordLength)}</span>
+                {t('draw.guessWhat', { name: name(view.drawer) })}
+                {view.hint && (
+                  <span className="text-muted block tracking-wider" data-testid="draw-hint">
+                    {view.hint}
+                  </span>
+                )}
               </p>
             )}
           </div>

@@ -30,7 +30,14 @@ export const wgBaseConfig = {
   /** how many times each player performs */
   rounds: z.number().int().min(1).max(5).default(1),
   skipPenalty: z.boolean().default(false),
+  /** first team to reach this score wins (checked at the end of a turn); 0 = play the rounds above */
+  targetScore: z.number().int().min(0).max(200).default(30),
+  /** host's manual team choice: player id → team index; unassigned players are spread automatically */
+  manualTeams: z.record(z.string(), z.number().int().min(0).max(3)).default({}),
 };
+
+/** safety cap on turns when playing to a target score */
+const MAX_TARGET_ROUNDS = 10;
 
 export const wgAction = z.discriminatedUnion('type', [
   z.object({ type: z.literal('start') }),
@@ -56,6 +63,7 @@ export interface WGState {
   pos: number;
   turn: number;
   totalTurns: number;
+  targetScore: number;
   phase: 'ready' | 'turn' | 'turnEnd' | 'over';
   endsAt: number | null;
   scores: number[];
@@ -64,11 +72,26 @@ export interface WGState {
   log: { word: string; result: 'correct' | 'skip' | 'buzz' }[];
 }
 
-export function makeTeams(players: Player[], n: number, rng: Rng): PlayerId[][] {
+export function makeTeams(
+  players: Player[],
+  n: number,
+  rng: Rng,
+  manual: Record<PlayerId, number> = {},
+): PlayerId[][] {
   const ids = rng.shuffle(players.map((p) => p.id));
   if (n === 0) return ids.map((id) => [id]);
   const teams: PlayerId[][] = Array.from({ length: n }, () => []);
-  ids.forEach((id, i) => teams[i % n]!.push(id));
+  const free: PlayerId[] = [];
+  for (const id of ids) {
+    const t = manual[id];
+    if (t != null && t < n) teams[t]!.push(id);
+    else free.push(id);
+  }
+  // spread the rest, always into the currently smallest team
+  for (const id of free) {
+    const smallest = teams.reduce((best, t, i) => (t.length < teams[best]!.length ? i : best), 0);
+    teams[smallest]!.push(id);
+  }
   return teams.filter((t) => t.length > 0);
 }
 
@@ -82,14 +105,22 @@ export function performerOf(s: Pick<WGState, 'teams' | 'turn'>): { team: number;
 export function setupWG(
   mode: string,
   players: Player[],
-  cfg: { teams: number; turnSeconds: number; rounds: number; skipPenalty: boolean },
+  cfg: {
+    teams: number;
+    turnSeconds: number;
+    rounds: number;
+    skipPenalty: boolean;
+    targetScore?: number;
+    manualTeams?: Record<PlayerId, number>;
+  },
   deck: Card[],
   opts: SetupOptions,
   rng: Rng,
   extra: { visibility: CardVisibility; allowBuzz: boolean },
 ): WGState {
-  const teams = makeTeams(players, Math.min(cfg.teams, players.length), rng);
+  const teams = makeTeams(players, Math.min(cfg.teams, players.length), rng, cfg.manualTeams);
   const maxSize = Math.max(...teams.map((t) => t.length));
+  const target = cfg.targetScore ?? 0;
   return {
     mode,
     local: opts.local,
@@ -103,7 +134,8 @@ export function setupWG(
     deck: rng.shuffle(deck),
     pos: 0,
     turn: 0,
-    totalTurns: teams.length * maxSize * cfg.rounds,
+    totalTurns: teams.length * maxSize * (target > 0 ? MAX_TARGET_ROUNDS : cfg.rounds),
+    targetScore: target,
     phase: 'ready',
     endsAt: null,
     scores: teams.map(() => 0),
@@ -164,7 +196,10 @@ export function reduceWG(
     case 'next':
       if (s.phase !== 'turnEnd' || !(isPerformer || host)) return state;
       s.turn++;
-      s.phase = s.turn >= s.totalTurns ? 'over' : 'ready';
+      s.phase =
+        s.turn >= s.totalTurns || (s.targetScore > 0 && s.scores.some((x) => x >= s.targetScore))
+          ? 'over'
+          : 'ready';
       return s;
     case 'end':
       if (!host || s.phase === 'over') return state;
@@ -188,6 +223,7 @@ export interface WGView {
   turnSeconds: number;
   turn: number;
   totalTurns: number;
+  targetScore: number;
   scores: number[];
   card: Card | null;
   canSeeCard: boolean;
@@ -219,6 +255,7 @@ export function viewWG(s: WGState, viewer: PlayerId | 'public'): WGView {
     turnSeconds: s.turnSeconds,
     turn: s.turn,
     totalTurns: s.totalTurns,
+    targetScore: s.targetScore,
     scores: s.scores,
     card: see ? s.deck[s.pos % s.deck.length]! : null,
     canSeeCard: see,

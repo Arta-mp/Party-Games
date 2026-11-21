@@ -12,6 +12,8 @@ import { useTilt } from './tilt';
 const TEAM_COLORS = ['bg-team-a', 'bg-team-b', 'bg-success', 'bg-brand'];
 
 type Cfg = {
+  targetScore: number;
+  manualTeams: Record<string, number>;
   teams: number;
   turnSeconds: number;
   rounds: number;
@@ -23,7 +25,7 @@ type Cfg = {
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function makeWGSetup(id: string): ComponentType<SetupProps<any>> {
-  return function WGSetup({ config, onChange }: SetupProps<Cfg>) {
+  return function WGSetup({ config, onChange, players }: SetupProps<Cfg>) {
     const t = useT();
     const num = useNum();
     const set = (p: Partial<Cfg>) => onChange({ ...config, ...p });
@@ -57,12 +59,68 @@ export function makeWGSetup(id: string): ComponentType<SetupProps<any>> {
           onChange={(turnSeconds) => set({ turnSeconds })}
         />
         <Stepper
-          label={t('wg.cfg.rounds')}
-          value={config.rounds}
-          min={1}
-          max={5}
-          onChange={(rounds) => set({ rounds })}
+          label={t('wg.cfg.target')}
+          value={config.targetScore}
+          min={0}
+          max={200}
+          step={5}
+          format={(v) => (v === 0 ? t('wg.cfg.noTarget') : num(v))}
+          onChange={(targetScore) => set({ targetScore })}
         />
+        {config.targetScore === 0 && (
+          <Stepper
+            label={t('wg.cfg.rounds')}
+            value={config.rounds}
+            min={1}
+            max={5}
+            onChange={(rounds) => set({ rounds })}
+          />
+        )}
+        {config.teams > 0 && players && players.length > 0 && (
+          <div className="flex flex-col gap-2" data-testid="team-assign">
+            <span className="text-muted text-sm font-bold">{t('wg.cfg.assign')}</span>
+            {players.map((p) => {
+              const cur = config.manualTeams[p.id];
+              return (
+                <div key={p.id} className="flex items-center gap-2">
+                  <span className="min-w-0 flex-1 truncate font-bold">{p.name}</span>
+                  <div
+                    className="bg-surface-2 flex gap-1 rounded-xl p-1"
+                    role="radiogroup"
+                    aria-label={p.name}
+                  >
+                    {[-1, ...Array.from({ length: config.teams }, (_, i) => i)].map((ti) => (
+                      <button
+                        key={ti}
+                        type="button"
+                        role="radio"
+                        aria-checked={(cur ?? -1) === ti}
+                        data-testid={`team-${p.name}-${ti}`}
+                        onClick={() => {
+                          const next = { ...config.manualTeams };
+                          if (ti < 0) delete next[p.id];
+                          else next[p.id] = ti;
+                          set({ manualTeams: next });
+                        }}
+                        className={cn(
+                          'h-10 min-w-10 rounded-lg px-2 text-sm font-bold',
+                          (cur ?? -1) === ti
+                            ? ti < 0
+                              ? 'bg-border'
+                              : cn(TEAM_COLORS[ti % 4], 'text-white')
+                            : 'text-muted',
+                        )}
+                      >
+                        {ti < 0 ? '🎲' : num(ti + 1)}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
+            <span className="text-muted text-xs">{t('wg.cfg.assignHint')}</span>
+          </div>
+        )}
         <Toggle
           label={t('wg.cfg.skipPenalty')}
           checked={config.skipPenalty}
@@ -163,7 +221,11 @@ export function WordGuessPlay({ view, dispatch, me, isHost, now }: PlayProps<WGV
       <div className="flex flex-col gap-4">
         <Teams view={view} />
         <Card className="flex flex-col items-center gap-3 py-6 text-center">
-          <Badge>{t('wg.turnOf', { n: view.turn + 1, total: view.totalTurns })}</Badge>
+          <Badge>
+            {view.targetScore > 0
+              ? t('wg.toTarget', { n: view.targetScore })
+              : t('wg.turnOf', { n: view.turn + 1, total: view.totalTurns })}
+          </Badge>
           <Avatar name={performerName} size={72} />
           <h2 className="text-2xl font-black">
             {t(view.mode === 'word.forehead' ? 'wg.guesser' : 'wg.performer', { name: performerName })}

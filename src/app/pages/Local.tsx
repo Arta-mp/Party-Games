@@ -155,6 +155,7 @@ export function LocalSetup() {
         gameId={configFor}
         initial={local.gameId === configFor ? local.config : undefined}
         playerCount={names.length}
+        players={names.map((name, i) => ({ id: `p${i + 1}`, name }))}
         mode="local"
         onClose={() => setConfigFor(null)}
         onConfirm={(id, cfg) => {

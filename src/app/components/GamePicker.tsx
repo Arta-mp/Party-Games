@@ -1,5 +1,5 @@
 import { Suspense, useEffect, useState } from 'react';
-import type { AnyGameModule, GameMeta, PlayMode } from '@/core/engine/types';
+import type { AnyGameModule, GameMeta, Player, PlayMode } from '@/core/engine/types';
 import { FAMILIES, gamesOf, loadGame, playable } from '@/games/registry';
 import { useNum, useT, useTm } from '@/i18n';
 import { cn } from '@/ui/cn';
@@ -105,6 +105,7 @@ export function GameConfigSheet({
   gameId,
   initial,
   playerCount,
+  players,
   mode,
   onClose,
   onConfirm,
@@ -112,6 +113,7 @@ export function GameConfigSheet({
   gameId: string | null;
   initial?: unknown;
   playerCount: number;
+  players?: Player[];
   mode: PlayMode;
   onClose: () => void;
   onConfirm: (gameId: string, config: unknown) => void;
@@ -148,7 +150,13 @@ export function GameConfigSheet({
           {!mod && <Notice>{t('common.loading')}</Notice>}
           {mod && Setup && (
             <Suspense fallback={null}>
-              <Setup config={config as never} onChange={setConfig} playerCount={playerCount} mode={mode} />
+              <Setup
+                config={config as never}
+                onChange={setConfig}
+                playerCount={playerCount}
+                players={players}
+                mode={mode}
+              />
             </Suspense>
           )}
           {invalid && <Notice tone="warn">{tm(invalid)}</Notice>}

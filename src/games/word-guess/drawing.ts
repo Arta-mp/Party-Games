@@ -49,6 +49,8 @@ export const WIDTHS = [3, 6, 12, 24];
 export const drawConfig = z.object({
   canvas: z.boolean().default(true),
   turnSeconds: z.number().int().min(30).max(240).default(80),
+  /** hints for guessers: none, the letter count, or letters revealed at 50% and 75% of the time */
+  hints: z.enum(['none', 'length', 'letters']).default('length'),
   rounds: z.number().int().min(1).max(4).default(1),
   packs: packSelection.default({ builtin: ['draw-fa'], custom: [] }),
 });
@@ -97,6 +99,9 @@ export interface DrawState {
   guesses: { p: PlayerId; text: string; ok: boolean }[];
   solved: PlayerId[];
   scores: Record<PlayerId, number>;
+  /** pending letter-reveal times (host clock) and the revealed letter positions */
+  hintTimes: number[];
+  revealed: number[];
 }
 
 export interface DrawView {
@@ -105,7 +110,8 @@ export interface DrawView {
   drawer: PlayerId;
   canvas: boolean;
   word: string | null;
-  wordLength: number;
+  /** masked word for guessers, e.g. «_ _ ب _»; null when hints are off */
+  hint: string | null;
   endsAt: number | null;
   turnSeconds: number;
   turn: number;
@@ -118,6 +124,17 @@ export interface DrawView {
 }
 
 const MAX_STROKES = 600;
+
+/** «_ _ ب _» — spaces/ZWNJ are kept, revealed positions show their letter */
+export function maskWord(word: string, mode: DrawConfig['hints'], revealed: number[]): string | null {
+  if (mode === 'none') return null;
+  return [...word]
+    .map((ch, i) =>
+      ch === ' ' ? '  ' : ch === '\u200c' ? '' : mode === 'letters' && revealed.includes(i) ? ch : '_',
+    )
+    .filter((x) => x !== '')
+    .join(' ');
+}
 const drawerOf = (s: DrawState) => s.order[s.turn % s.order.length]!;
 
 function solve(s: DrawState, p: PlayerId) {
@@ -158,6 +175,8 @@ export const drawing: GameModule<DrawConfig, DrawState, DrawAction, DrawView> = 
       strokes: [],
       guesses: [],
       solved: [],
+      hintTimes: [],
+      revealed: [],
       scores: Object.fromEntries(players.map((p) => [p.id, 0])),
     };
   },
@@ -173,6 +192,11 @@ export const drawing: GameModule<DrawConfig, DrawState, DrawAction, DrawView> = 
         s.strokes = [];
         s.guesses = [];
         s.solved = [];
+        s.revealed = [];
+        s.hintTimes =
+          s.cfg.hints === 'letters'
+            ? [0.5, 0.75].map((f) => ctx.now + Math.round(s.cfg.turnSeconds * 1000 * f))
+            : [];
         return s;
       case 'stroke':
         if (s.phase !== 'draw' || !(actor === drawer || s.local) || s.strokes.length >= MAX_STROKES)
@@ -200,11 +224,24 @@ export const drawing: GameModule<DrawConfig, DrawState, DrawAction, DrawView> = 
           return state;
         solve(s, action.player);
         return s;
-      case '$timeout':
+      case '$timeout': {
         if (s.phase !== 'draw') return state;
+        const due = s.hintTimes.filter((t) => t <= ctx.now);
+        if (due.length && (s.endsAt == null || ctx.now < s.endsAt)) {
+          s.hintTimes = s.hintTimes.filter((t) => t > ctx.now);
+          const word = [...s.words[s.turn]!];
+          const hidden = word
+            .map((_ch, i) => i)
+            .filter((i) => word[i] !== ' ' && word[i] !== '\u200c' && !s.revealed.includes(i));
+          // never reveal the last hidden letter
+          if (hidden.length > 1) s.revealed.push(ctx.rng.pick(hidden));
+          return s;
+        }
         s.phase = 'reveal';
         s.endsAt = null;
+        s.hintTimes = [];
         return s;
+      }
       case 'next':
         if (s.phase !== 'reveal' || !drawerOrHost) return state;
         s.turn++;
@@ -224,7 +261,7 @@ export const drawing: GameModule<DrawConfig, DrawState, DrawAction, DrawView> = 
       drawer,
       canvas: s.cfg.canvas,
       word: reveal || (viewer === drawer && s.phase !== 'ready') ? word : null,
-      wordLength: [...word.replace(/\s/g, '')].length,
+      hint: maskWord(word, s.cfg.hints, s.revealed),
       endsAt: s.endsAt,
       turnSeconds: s.cfg.turnSeconds,
       turn: s.turn,
@@ -254,7 +291,7 @@ export const drawing: GameModule<DrawConfig, DrawState, DrawAction, DrawView> = 
     };
   },
   pending: (s) => (s.phase === 'draw' && s.local ? [drawerOf(s)] : []),
-  deadline: (s) => (s.phase === 'draw' ? s.endsAt : null),
+  deadline: (s) => (s.phase === 'draw' ? Math.min(s.endsAt ?? Infinity, ...s.hintTimes) : null),
   validate: (_c, n) => (n < 3 ? { k: 'err.minPlayers', p: { n: 3 } } : null),
   screens: { Setup: DrawingSetup, Play: DrawingPlay },
 };

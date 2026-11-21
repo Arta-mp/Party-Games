@@ -332,6 +332,7 @@ export function LobbyPage() {
         gameId={configFor}
         initial={lobby.game?.id === configFor ? lobby.game?.config : undefined}
         playerCount={connected}
+        players={lobby.players.filter((p) => p.connected).map((p) => ({ id: p.id, name: p.name }))}
         mode="online"
         onClose={() => setConfigFor(null)}
         onConfirm={(gameId, config) => {

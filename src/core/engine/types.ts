@@ -72,6 +72,8 @@ export interface SetupProps<C> {
   config: C;
   onChange: (config: C) => void;
   playerCount: number;
+  /** the players who will play (for per-player options such as manual teams) */
+  players?: Player[];
   mode: PlayMode;
 }
 
