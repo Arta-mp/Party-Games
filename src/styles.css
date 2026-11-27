@@ -52,6 +52,10 @@
   --accent: #2ed3b7;
   --accent-ink: #002b24;
 }
+[data-family='card'] {
+  --accent: #e6b54a;
+  --accent-ink: #2a1c00;
+}
 [data-family='party'] {
   --accent: #ff6fb5;
   --accent-ink: #33001a;
@@ -71,6 +75,10 @@
 }
 :root[data-theme='light'] [data-family='team-board'] {
   --accent: #0f9f8a;
+  --accent-ink: #fff;
+}
+:root[data-theme='light'] [data-family='card'] {
+  --accent: #b8860b;
   --accent-ink: #fff;
 }
 :root[data-theme='light'] [data-family='party'] {

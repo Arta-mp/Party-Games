@@ -14,7 +14,7 @@
 | ------------------------------ | -------------------------------- | ------------------------------- | ------------------------------------ | ----------------------------------- |
 | ![](docs/screenshots/home.jpg) | ![](docs/screenshots/reveal.jpg) | ![](docs/screenshots/lobby.jpg) | ![](docs/screenshots/mafia-dawn.jpg) | ![](docs/screenshots/codewords.jpg) |
 
-## 🎮 بازی‌ها (۲۴ مود در ۵ خانواده)
+## 🎮 بازی‌ها (۲۵ مود در ۶ خانواده)
 
 | خانواده            | مودها                                                                                                  |
 | ------------------ | ------------------------------------------------------------------------------------------------------ |
@@ -23,6 +23,7 @@
 | 🗣️ حدس کلمه        | پانتومیم · حرف ممنوع · روی پیشانی (سنسور کج‌کردن) · نقاشی حدس (بوم زنده) · سرنخ یکتا                   |
 | 🧩 بردی تیمی       | رمزواژه · رمزواژه‌ی دونفره · طیف‌سنج                                                                   |
 | 🎉 پارتی           | اسم فامیل · دروغ‌سنج · کی احتمالاً… · حقیقت یا جرأت                                                     |
+| ♠️ کارتی           | پوکر تگزاس هولدم (کارت مجازی یا ورق واقعی + ژتون روی گوشی)                                             |
 
 مودهایی که از بازی‌های تجاری الهام گرفته‌اند با نام، متن و محتوای اختصاصی خود این پروژه ساخته شده‌اند (فقط سازوکار بازی مشابه است).
 
@@ -65,7 +66,7 @@ src/
 pnpm install
 pnpm dev            # http://localhost:5173
 pnpm test           # unit tests (Vitest): reducers, secrecy, lobby over in-memory network, packs, i18n
-pnpm e2e            # Playwright (builds first): pass & play, 4-tab online round, all 24 modes, PWA offline
+pnpm e2e            # Playwright (builds first): pass & play, 4-tab online round, all 25 modes, poker hands, PWA offline
 pnpm lint && pnpm typecheck && pnpm format:check
 pnpm build && pnpm preview --port 4173 & pnpm lighthouse   # mobile Lighthouse, fails under 90
 ANALYZE=1 pnpm build   # bundle treemap (stats.html)
