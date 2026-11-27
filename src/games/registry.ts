@@ -30,6 +30,7 @@ const loaders: Record<GameId, () => Promise<AnyGameModule>> = {
   'party.liar': () => import('./party/liar').then((m) => m.liar),
   'party.mostlikely': () => import('./party/mostlikely').then((m) => m.mostLikely),
   'party.truthdare': () => import('./party/truthdare').then((m) => m.truthDare),
+  'cards.holdem': () => import('./card/holdem').then((m) => m.holdem),
 };
 
 const cache = new Map<string, Promise<AnyGameModule>>();

@@ -55,6 +55,27 @@ describe('i18n', () => {
       ...['won', 'assassin', 'time'].map((x) => `duet.result.${x}`),
       ...[1, 2, 3, 4].flatMap((i) => [`tut.${i}.title`, `tut.${i}.body`]),
       ...['family', 'friends', 'spicy'].map((x) => `td.level.${x}`),
+      ...['preflop', 'flop', 'turn', 'river'].flatMap((x) => [
+        `poker.street.${x}`,
+        `poker.physicalStreet.${x}`,
+        `poker.dealNow.${x}`,
+      ]),
+      ...['fold', 'check', 'call', 'allIn', 'bet', 'raise', 'sb', 'bb'].flatMap((x) => [
+        `poker.act.${x}`,
+        `poker.log.${x === 'sb' || x === 'bb' ? 'fold' : x}`,
+      ]),
+      ...[
+        'highCard',
+        'pair',
+        'twoPair',
+        'trips',
+        'straight',
+        'flush',
+        'fullHouse',
+        'quads',
+        'straightFlush',
+      ].map((x) => `poker.cat.${x}`),
+      ...['min', 'half', 'pot', 'max'].map((x) => `poker.preset.${x}`),
     ];
     expect(keys.filter((k) => !has(k))).toEqual([]);
   });

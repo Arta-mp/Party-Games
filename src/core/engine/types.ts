@@ -3,7 +3,7 @@ import type { z } from 'zod';
 import type { Rng } from './rng';
 
 export type PlayerId = string;
-export type FamilyId = 'hidden-word' | 'social-deduction' | 'word-guess' | 'team-board' | 'party';
+export type FamilyId = 'hidden-word' | 'social-deduction' | 'word-guess' | 'team-board' | 'party' | 'card';
 export type PlayMode = 'online' | 'local';
 
 /** Actor id used by the host runner for timer expiry and other system events. */

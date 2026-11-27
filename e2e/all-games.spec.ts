@@ -27,6 +27,7 @@ const GAMES: { id: string; family: string; players: number; step?: (p: Page) => 
   { id: 'party.liar', family: 'party', players: 3 },
   { id: 'party.mostlikely', family: 'party', players: 3 },
   { id: 'party.truthdare', family: 'party', players: 3, step: (p) => p.getByTestId('spin').click() },
+  { id: 'cards.holdem', family: 'card', players: 3 },
 ];
 
 const NAMES = ['آرتا', 'سارا', 'رضا', 'مینا', 'نیما', 'لیلا', 'امید'];

@@ -51,6 +51,8 @@ export const META = {
   'party.liar': m('party.liar', 'party', '🤥', 3, 10, 5),
   'party.mostlikely': m('party.mostlikely', 'party', '👉', 3, 20, 2),
   'party.truthdare': m('party.truthdare', 'party', '🎲', 2, 20, 2),
+
+  'cards.holdem': m('cards.holdem', 'card', '🃏', 2, 10, 7),
 } satisfies Record<string, GameMeta>;
 
 export type GameId = keyof typeof META;
@@ -66,4 +68,5 @@ export const FAMILIES: FamilyInfo[] = [
   { id: 'word-guess', emoji: '🗣️' },
   { id: 'team-board', emoji: '🧩' },
   { id: 'party', emoji: '🎉' },
+  { id: 'card', emoji: '♠️' },
 ];
