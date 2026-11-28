@@ -3,7 +3,8 @@ import { LocalHub, LocalTransport } from '@/core/net/local';
 import { CODE_RE, makeRoomCode, normalizeCode } from '@/core/net/protocol';
 import { loadGame } from '@/games/registry';
 import type { HWState, HWView } from '@/games/hidden-word/core';
-import { ClientSession, transportLink, type ClientState, type Promotion } from './client';
+import { GameRunner } from '@/core/engine/runner';
+import { ClientSession, HOST_GRACE_MS, transportLink, type ClientState, type Promotion } from './client';
 import { HostSession, type HostSnapshot } from './host';
 import { electHost, sessionAwards, sweep, type LobbyState } from './lobby';
 
@@ -383,6 +384,137 @@ describe('online lobby (host-authoritative over LocalTransport)', () => {
     expect(phones[1]!.c.state.playerId).toBe('p3'); // same seat as before
     expect(phones[2]!.c.state.playerId).toBe('p4');
     expect(host2.lobby.players.map((p) => p.name)).toEqual(['میزبان', 'a1', 'b2', 'c3']);
+  });
+
+  async function startSpy(env: ReturnType<typeof setup>) {
+    await env.host.start();
+    const phones = ['a1', 'b2', 'c3'].map((n) => env.join(n));
+    await flush();
+    for (const p of phones) p.c.lobbyAction({ type: 'ready', ready: true });
+    env.hostClient.lobbyAction({ type: 'select', gameId: 'spy.classic', config: null });
+    await flush();
+    env.hostClient.lobbyAction({ type: 'start' });
+    await flush();
+    return phones;
+  }
+
+  it('host drops briefly: nobody is elected, the game waits and continues when the host is back', async () => {
+    const env = setup();
+    const phones = await startSpy(env);
+    // a long game: the phones have seen many view revisions
+    const internals = env.host as unknown as { rev: number; pushViews(): void };
+    internals.rev = 50;
+    internals.pushViews();
+    await flush();
+    expect(phones[1]!.c.state.rev).toBe(50);
+    const secret = (env.host.runner!.state as HWState).secret;
+    const snap = env.saved.at(-1)!;
+    env.host.stop();
+    env.hostT.leave(); // e.g. the phone locked its screen and the page reloaded
+    await flush();
+    expect(phones[0]!.c.state.status).toBe('host-lost');
+    const staleView = phones[1]!.c.state.view;
+    // a minute later: still waiting for the same host, nobody has taken over
+    clock += 60_000;
+    for (const p of phones) p.c.checkElection(HOST_GRACE_MS);
+    expect(phones.flatMap((p) => p.promoted)).toEqual([]);
+    clock -= 60_000; // (keep the game's own timers out of this test)
+    expect(phones[1]!.c.state.lobby!.status).toBe('playing');
+    expect((phones[1]!.c.state.view as HWView).me).not.toBeNull(); // the game stays on screen
+    const t2 = new LocalTransport(env.hub);
+    const back = await HostSession.restore(snap, env.deps(t2));
+    await back.start();
+    await flush(10);
+    for (const p of phones) expect(p.c.state.status).toBe('online');
+    expect(back.lobby.hostId).toBe('p1');
+    // the restarted host counts view revisions from 0 again: phones must still take its views
+    expect(phones[1]!.c.state.view).not.toBe(staleView);
+    expect(phones[1]!.c.state.view).toEqual(staleView);
+    expect(back.lobby.status).toBe('playing');
+    expect((back.runner!.state as HWState).secret).toBe(secret);
+    // only if the host never comes back is a new one chosen
+    expect(HOST_GRACE_MS).toBeGreaterThanOrEqual(60_000);
+  });
+
+  it('host leaves mid-game: the next player takes over the room and the running game at once', async () => {
+    const env = setup();
+    const phones = await startSpy(env);
+    const secret = (env.host.runner!.state as HWState).secret;
+    expect(env.host.successor()).toBe('p2');
+    const left = env.host.handOver();
+    await flush();
+    const heir = phones[0]!;
+    expect(heir.promoted.map((p) => p.kind)).toEqual(['snapshot']);
+    expect(phones[1]!.promoted).toHaveLength(0);
+    const snap = (heir.promoted[0] as { data: HostSnapshot }).data;
+    expect(snap.lobby).toMatchObject({ hostId: 'p2', epoch: 1, status: 'playing', notice: 'hostHandedOver' });
+    expect(snap.lobby.players.find((p) => p.id === 'p1')!.connected).toBe(false);
+    expect(Object.values(snap.devices)).not.toContain('p1');
+    // the heir becomes the host (what the app does on a snapshot promotion)
+    heir.c.close();
+    const t2 = new LocalTransport(env.hub);
+    const host2 = await HostSession.restore(snap, env.deps(t2));
+    await host2.start();
+    await flush(10);
+    await expect(left).resolves.toBe(true); // the old host saw the new one and stopped
+    expect(env.stepDowns).toEqual([]); // …without rejoining as a player
+    expect(host2.runner!.hostId).toBe('p2');
+    const st = host2.runner!.state as HWState;
+    expect(st.secret).toBe(secret);
+    expect((st as unknown as { hostId: string }).hostId).toBe('p2'); // host-only buttons work for the heir
+    for (const p of phones.slice(1)) {
+      expect(p.c.state.status).toBe('online');
+      expect(p.c.state.lobby!.hostId).toBe('p2');
+      expect((p.c.state.view as HWView).me).not.toBeNull();
+    }
+  });
+
+  it('host leaves the lobby: removed from the list, the next player is the host', async () => {
+    const env = setup();
+    await env.host.start();
+    const phones = ['a1', 'b2'].map((n) => env.join(n));
+    await flush();
+    void env.host.handOver();
+    await flush();
+    const snap = (phones[0]!.promoted[0] as { data: HostSnapshot }).data;
+    expect(snap.lobby.hostId).toBe('p2');
+    expect(snap.lobby.notice).toBe('hostLeft');
+    expect(snap.lobby.players.map((p) => p.id)).toEqual(['p2', 'p3']);
+  });
+
+  it('host leaves with nobody else online: nothing to hand over', async () => {
+    const env = setup();
+    await env.host.start();
+    await expect(env.host.handOver()).resolves.toBe(false);
+  });
+
+  it('runner hand-over moves host powers; moderated mafia stops (the moderator saw every role)', async () => {
+    const players = ['p1', 'p2', 'p3', 'p4', 'p5', 'p6', 'p7'].map((id) => ({ id, name: id }));
+    const spyMod = await loadGame('spy.classic');
+    const spy = GameRunner.create(spyMod, players.slice(0, 4), spyMod.defaultConfig, {
+      seed: 1,
+      now: 0,
+      hostId: 'p1',
+      local: false,
+    });
+    expect((spy.handOver('p3', { now: 0, leaving: true })!.state as { hostId: string }).hostId).toBe('p3');
+    expect((spy.state as { hostId: string }).hostId).toBe('p1'); // the original is untouched
+    const mod = await loadGame('mafia.moderated');
+    const moderated = GameRunner.create(mod, players, mod.defaultConfig, {
+      seed: 1,
+      now: 0,
+      hostId: 'p1',
+      local: false,
+    });
+    expect(moderated.handOver('p2', { now: 0, leaving: true })).toBeNull();
+    const auto = await loadGame('mafia.auto');
+    const a = GameRunner.create(auto, players, auto.defaultConfig, {
+      seed: 1,
+      now: 0,
+      hostId: 'p1',
+      local: false,
+    });
+    expect((a.handOver('p2', { now: 0, leaving: true })!.state as { hostId: string }).hostId).toBe('p2');
   });
 
   it('a stale host steps down when it hears a newer epoch', async () => {

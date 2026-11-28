@@ -26,7 +26,7 @@ export interface LobbyState {
   stats: Record<PlayerId, Record<string, number>>;
   round: number;
   result: GameResult | null;
-  /** set when the game stopped because the host disappeared */
+  /** set when the host changed: `hostLeft` / `hostLeftGame` (game stopped) / `hostHandedOver` (game kept) */
   notice: string | null;
 }
 
@@ -102,21 +102,22 @@ export function applyResult(l: LobbyState, r: GameResult): LobbyState {
 }
 
 /**
- * Deterministic host election used when the host vanished: the k-th oldest connected player
- * (k grows every `grace` ms, in case the first candidate is gone too).
+ * Deterministic host election used when the host never came back: the k-th oldest connected player
+ * (k grows every `stepMs` after the grace period, in case the first candidate is gone too).
  */
 export function electHost(
   l: LobbyState,
   elapsedMs: number,
   graceMs: number,
   isAlive: (id: PlayerId) => boolean = () => true,
+  stepMs: number = graceMs,
 ): PlayerId | null {
   if (elapsedMs < graceMs) return null;
   const candidates = l.players
     .filter((p) => p.id !== l.hostId && p.connected && isAlive(p.id))
     .sort((a, b) => a.joinedAt - b.joinedAt || a.id.localeCompare(b.id));
   if (candidates.length === 0) return null;
-  const k = Math.floor((elapsedMs - graceMs) / graceMs);
+  const k = Math.floor((elapsedMs - graceMs) / stepMs);
   return candidates[Math.min(k, candidates.length - 1)]!.id;
 }
 

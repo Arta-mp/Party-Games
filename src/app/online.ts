@@ -61,14 +61,16 @@ export const useOnline = create<OnlineStore>((set, get) => {
     loadGame,
     persist: (snap) => writeJSON(hostKey(code), snap),
     onStepDown: () => {
-      // transfer done or a newer host exists: continue as a normal player of the same room
+      // transfer done or a newer host exists (we were away too long): continue as a normal player
+      // of the same room, in our old seat
+      const seat = get().state?.playerId ?? undefined;
       host?.stop();
       host = null;
       client?.close();
       client = null;
       transport?.leave();
       removeKey(hostKey(code));
-      startClient(code);
+      startClient(code, seat);
     },
   });
 
@@ -97,9 +99,9 @@ export const useOnline = create<OnlineStore>((set, get) => {
     startLoopback(code, h);
   };
 
-  const startClient = (code: string) => {
+  const startClient = (code: string, seat?: string) => {
     transport = createTransport(useSettings.getState());
-    const hi = hello();
+    const hi = { ...hello(), ...(seat ? { playerId: seat } : {}) };
     client = new ClientSession(transportLink(transport, code, hi), {
       hello: hi,
       onChange,
@@ -156,6 +158,20 @@ export const useOnline = create<OnlineStore>((set, get) => {
     },
     leave() {
       const code = get().code;
+      if (host && get().role === 'host') {
+        // leaving for good: hand the room and the running game to the next player, then disconnect
+        // (in the background, so the UI can go home right away)
+        const [h, c, t] = [host, client, transport];
+        host = null;
+        client = null;
+        transport = null;
+        moduleFor = null;
+        void h.handOver().finally(() => {
+          h.stop();
+          c?.close();
+          t?.leave();
+        });
+      }
       teardown();
       if (code) removeKey(hostKey(code));
       removeKey(SESSION_KEY);

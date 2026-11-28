@@ -224,7 +224,7 @@ export function HoldemPlay({ view, dispatch, me, isHost, now }: PlayProps<Holdem
               className={cn(
                 'bg-surface flex flex-col gap-1 rounded-2xl border p-2 transition',
                 turn ? 'border-accent ring-accent animate-pulse ring-2' : 'border-border',
-                s.folded && 'opacity-45',
+                (s.folded || s.left) && 'opacity-45',
                 winner && 'border-success ring-success ring-2',
               )}
             >
@@ -250,7 +250,11 @@ export function HoldemPlay({ view, dispatch, me, isHost, now }: PlayProps<Holdem
                 {s.allIn && (
                   <Badge className="bg-danger/25 text-text px-1.5 text-[10px]">{t('poker.allInTag')}</Badge>
                 )}
-                {s.folded && <span className="text-muted">{t('poker.foldedTag')}</span>}
+                {s.left ? (
+                  <span className="text-muted">🚪 {t('poker.leftTag')}</span>
+                ) : (
+                  s.folded && <span className="text-muted">{t('poker.foldedTag')}</span>
+                )}
                 {!s.folded && !s.allIn && s.lastAction && (
                   <span className="text-muted">{t(`poker.act.${s.lastAction}`)}</span>
                 )}
