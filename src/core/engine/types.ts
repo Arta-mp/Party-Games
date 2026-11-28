@@ -108,6 +108,13 @@ export interface GameModule<Config = unknown, State = unknown, Action = unknown,
   pending?(state: State): PlayerId[];
   /** absolute host time when the runner should fire `$timeout` */
   deadline?(state: State): number | null;
+  /**
+   * The online host changed (`leaving`: the old host left the room for good, otherwise it was a
+   * hand-over and the old host keeps playing) and `newHostId` takes over the running game. Return the state with host-only
+   * powers moved to the new host, or null if the game can't fairly continue (e.g. the moderator, who saw
+   * every secret, is gone). Default: the top-level `hostId` field is moved.
+   */
+  hostChanged?(state: State, newHostId: PlayerId, ctx: { now: number; leaving: boolean }): State | null;
   /** returns an i18n key when the config/player count is not playable */
   validate?(config: Config, playerCount: number): Msg | null;
   screens: {

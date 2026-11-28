@@ -62,6 +62,8 @@ export class HostSession {
   private nextId = 1;
   private stopped = false;
   private starting: Promise<void> | null = null;
+  /** set while handing the room over before leaving; resolves once the new host is up */
+  private handedOver: (() => void) | null = null;
 
   private constructor(
     private deps: HostDeps,
@@ -184,7 +186,9 @@ export class HostSession {
       (raw as { code?: string }).code === 'superseded'
     ) {
       this.stop();
-      this.deps.onStepDown?.('superseded');
+      if (this.handedOver)
+        this.handedOver(); // we are leaving: the successor is up, nothing else to do
+      else this.deps.onStepDown?.('superseded');
       return;
     }
     const parsed = clientMsgSchema.safeParse(raw);
@@ -343,10 +347,7 @@ export class HostSession {
         const target = l.players.find((p) => p.id === a.id && p.connected);
         const peer = [...this.peers].find(([, p]) => p === a.id)?.[0];
         if (!target || !peer || peer.startsWith(LOCAL)) return;
-        const snap = this.snapshot();
-        snap.lobby = { ...snap.lobby, epoch: l.epoch + 1, hostId: a.id };
-        if (snap.runner) snap.runner = { ...snap.runner, hostId: a.id };
-        this.send(peer, { t: 'snapshot', data: snap });
+        this.send(peer, { t: 'snapshot', data: this.snapshotFor(a.id, false) });
         this.stop();
         this.deps.onStepDown?.('transfer');
         return;
@@ -429,6 +430,78 @@ export class HostSession {
     };
     this.deps.transport.broadcast(msg);
     for (const key of this.locals.keys()) this.send(key, msg);
+  }
+
+  /**
+   * Full snapshot for the next host (sent to that one phone only). The running game moves along with
+   * its host-only powers; if the game can't continue without us it is stopped.
+   */
+  private snapshotFor(next: PlayerId, leaving: boolean): HostSnapshot {
+    const snap = this.snapshot();
+    const me = this.lobby.hostId;
+    const runner = this.runner?.handOver(next, { now: this.deps.now(), leaving }) ?? null;
+    const gameStopped = !!this.runner && this.lobby.status === 'playing' && !runner;
+    let players = snap.lobby.players;
+    if (leaving)
+      players =
+        this.lobby.status === 'playing' && !gameStopped
+          ? players.map((p) => (p.id === me ? { ...p, connected: false, lastSeen: this.deps.now() } : p))
+          : players.filter((p) => p.id !== me);
+    snap.lobby = {
+      ...snap.lobby,
+      epoch: this.lobby.epoch + 1,
+      hostId: next,
+      players,
+      ...(gameStopped
+        ? {
+            status: 'lobby' as const,
+            result: null,
+            players: players.map((p) => ({ ...p, ready: p.id === next })),
+          }
+        : {}),
+      notice: !leaving
+        ? this.lobby.notice
+        : gameStopped
+          ? 'hostLeftGame'
+          : this.lobby.status === 'playing'
+            ? 'hostHandedOver'
+            : 'hostLeft',
+    };
+    snap.runner = gameStopped ? null : runner;
+    if (leaving) snap.devices = Object.fromEntries(Object.entries(snap.devices).filter(([, p]) => p !== me));
+    return snap;
+  }
+
+  /** the next host if we leave: the longest-connected player who is reachable over the network */
+  successor(): PlayerId | null {
+    const reachable = new Set([...this.peers].filter(([peer]) => !peer.startsWith(LOCAL)).map(([, p]) => p));
+    return (
+      this.lobby.players
+        .filter((p) => p.id !== this.lobby.hostId && p.connected && reachable.has(p.id))
+        .sort((a, b) => a.joinedAt - b.joinedAt || a.id.localeCompare(b.id))[0]?.id ?? null
+    );
+  }
+
+  /**
+   * The host is leaving for good: hand the room (and the running game) to the next player right away
+   * instead of making everyone wait for an election. Resolves true once the successor has taken over
+   * (or after `timeoutMs`), false if there was nobody to hand over to.
+   */
+  handOver(timeoutMs = 5000): Promise<boolean> {
+    const next = this.successor();
+    if (!next || this.stopped) return Promise.resolve(false);
+    const snap = this.snapshotFor(next, true);
+    return new Promise((resolve) => {
+      const done = () => {
+        clearTimeout(timer);
+        this.handedOver = null;
+        this.stop();
+        resolve(true);
+      };
+      const timer = setTimeout(done, timeoutMs);
+      this.handedOver = done;
+      for (const peer of this.peerOf(next)) this.send(peer, { t: 'snapshot', data: snap });
+    });
   }
 
   snapshot(): HostSnapshot {

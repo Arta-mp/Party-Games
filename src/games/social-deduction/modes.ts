@@ -35,6 +35,8 @@ function make(
     result: resultMafia,
     pending: pendingMafia,
     deadline: (s) => (s.phase === 'day' || s.phase === 'defense' ? s.endsAt : null),
+    // the moderator (the old host) has seen every role: nobody else can take over fairly
+    hostChanged: (s, newHostId) => (s.moderator ? null : { ...s, hostId: newHostId }),
     validate: (cfg, n) => {
       const meta = META[id];
       if (n < meta.minPlayers) return { k: 'err.minPlayers', p: { n: meta.minPlayers } };

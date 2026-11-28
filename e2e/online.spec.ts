@@ -145,3 +145,58 @@ test('a guest that refreshes keeps their seat', async ({ context }) => {
   await expect(guest.getByTestId('lobby-code')).toHaveText(code);
   await expect(host.getByTestId('player-list').locator('> *')).toHaveCount(2);
 });
+
+test('the host leaves mid-game: the next player becomes host and the game goes on', async ({ context }) => {
+  const names = ['میزبان', 'سارا', 'رضا'];
+  const pages: Page[] = [];
+  for (let i = 0; i < 3; i++) {
+    const p = await context.newPage();
+    await tab(p, names[i]!, 10 + i);
+    pages.push(p);
+  }
+  const [host, heir, other] = pages as [Page, Page, Page];
+  await host.goto('./?transport=broadcast#/');
+  await host.getByTestId('create-lobby').click();
+  const code = (await host.getByTestId('lobby-code').innerText()).trim();
+  await heir.goto(`./?transport=broadcast#/join/${code}`);
+  await expect(heir.getByTestId('lobby-code')).toHaveText(code);
+  await other.goto(`./?transport=broadcast#/join/${code}`);
+  await expect(host.getByTestId('player-list').locator('> *')).toHaveCount(3);
+  await pickGame(host, 'card', 'cards.holdem');
+  for (const g of [heir, other]) await g.getByTestId('ready').click();
+  await host.getByTestId('start-game').click();
+  for (const p of pages) await expect(p.getByTestId('poker-table')).toBeVisible();
+  const cardsBefore = await heir
+    .getByTestId('my-hand')
+    .getByTestId('playing-card')
+    .evaluateAll((els) => els.map((e) => e.getAttribute('aria-label')));
+
+  await host.getByTestId('leave-game').click();
+  await host.getByTestId('confirm-leave').click();
+  await expect(host).toHaveURL(/#\/$/);
+
+  // the heir is host within moments (no 2-minute election) and the hand is the same hand
+  await expect(heir.getByTestId('lobby-notice')).toContainText(names[1]!);
+  await expect(other.getByTestId('lobby-notice')).toContainText(names[1]!);
+  await expect(heir.getByTestId('poker-table')).toBeVisible();
+  await expect(heir.getByText(/دست ۱/)).toBeVisible();
+  expect(
+    await heir
+      .getByTestId('my-hand')
+      .getByTestId('playing-card')
+      .evaluateAll((els) => els.map((e) => e.getAttribute('aria-label'))),
+  ).toEqual(cardsBefore);
+  // the host who left folded and sits out; the table doesn't wait for them
+  await expect(other.getByTestId(`seat-${names[0]}`)).toContainText('رفت');
+  await expect(other.getByText(`نوبت ${names[0]}`)).toHaveCount(0);
+  await shot(other, 'online-host-left');
+  // play on: fold whoever's turn it is until the hand is over, then the new host deals the next one
+  for (let i = 0; i < 10 && !(await heir.getByTestId('hand-results').isVisible()); i++) {
+    for (const p of [heir, other])
+      if (await p.getByTestId('poker-fold').isVisible()) await p.getByTestId('poker-fold').click();
+    await heir.waitForTimeout(200);
+  }
+  await expect(heir.getByTestId('next-hand')).toBeVisible(); // host-only button works for the heir
+  await heir.getByTestId('next-hand').click();
+  await expect(other.getByText(/دست ۲/)).toBeVisible();
+});

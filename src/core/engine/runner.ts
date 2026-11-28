@@ -93,6 +93,22 @@ export class GameRunner {
     }
   }
 
+  /**
+   * A copy of this game for a new host (online host hand-over), or null if the game can't continue
+   * without the old one. Host-only powers move to `newHostId`.
+   */
+  handOver(newHostId: PlayerId, ctx: { now: number; leaving: boolean }): RunnerSnapshot | null {
+    const snap = this.snapshot();
+    let state: unknown;
+    if (this.module.hostChanged) state = this.module.hostChanged(snap.state as never, newHostId, ctx);
+    else {
+      const s = snap.state as Record<string, unknown> | null;
+      state = s && typeof s === 'object' && 'hostId' in s ? { ...s, hostId: newHostId } : s;
+    }
+    if (state == null) return null;
+    return { ...snap, state, hostId: newHostId };
+  }
+
   /** Fires `$timeout` if the module's deadline passed. Returns true when state changed. */
   tick(now: number): boolean {
     const d = this.deadline();

@@ -48,7 +48,14 @@ export interface ClientState {
 
 export type Promotion = { kind: 'snapshot'; data: HostSnapshot } | { kind: 'election'; lobby: LobbyState };
 
-export const HOST_GRACE_MS = 15_000;
+/**
+ * A host that drops (bad signal, locked screen, refresh) gets this long to come back; the lobby and the
+ * game simply wait for it. Only if it never returns is a new host elected (a host that *leaves* hands
+ * the room over at once instead, see HostSession.handOver).
+ */
+export const HOST_GRACE_MS = 120_000;
+/** if the elected player is gone too, the next one takes over after this */
+export const HOST_STEP_MS = 10_000;
 
 export class ClientSession {
   state: ClientState = {
@@ -102,7 +109,15 @@ export class ClientSession {
     switch (msg.t) {
       case 'welcome':
         this.opts.hello.playerId = msg.playerId;
-        this.set({ playerId: msg.playerId, status: 'online', offset, hostLostAt: null, lastError: null });
+        // a (new or restarted) host counts view revisions from scratch: accept its views
+        this.set({
+          playerId: msg.playerId,
+          status: 'online',
+          offset,
+          hostLostAt: null,
+          lastError: null,
+          rev: -1,
+        });
         break;
       case 'lobby': {
         const lobby = msg.lobby as unknown as LobbyState;
@@ -145,7 +160,13 @@ export class ClientSession {
   checkElection(grace = this.opts.graceMs ?? HOST_GRACE_MS) {
     const { lobby, playerId, hostLostAt, status } = this.state;
     if (status !== 'host-lost' || !lobby || !playerId || hostLostAt == null) return;
-    const elected = electHost(lobby, this.localNow() - hostLostAt, grace);
+    const elected = electHost(
+      lobby,
+      this.localNow() - hostLostAt,
+      grace,
+      undefined,
+      Math.min(grace, HOST_STEP_MS),
+    );
     if (elected === playerId) {
       this.stopElection();
       this.opts.onPromote?.({ kind: 'election', lobby });

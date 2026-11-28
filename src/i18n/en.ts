@@ -225,9 +225,15 @@ export const en: Record<keyof typeof fa, string> = {
   'lobby.connectingHint': 'Looking for the host via {via}',
   'lobby.connectTroubleshoot':
     'Taking long? Make sure the host keeps the lobby open. If it still fails, switch the connection method in settings (everyone must use the same one) or use “One phone”.',
-  'lobby.hostLost': 'Lost connection to the host. Waiting for them… ({s}s until a new host is chosen)',
+  'lobby.hostLost':
+    "The host's connection dropped; everything stays as it is and we continue when they're back… (if they're not back in {s}s, a new host is chosen)",
   'lobby.hostHint': 'You are the host: the game runs on your phone, keep this page open.',
+  'lobby.leaveGame': 'Leave game',
+  'lobby.leaveHint': 'You leave the game; the others carry on without you.',
+  'lobby.leaveHostHint':
+    "You're the host: when you leave, the next player becomes host and the game goes on for everyone else.",
   'lobby.notice.hostLeft': 'The previous host left; a new host was chosen.',
+  'lobby.notice.hostHandedOver': 'The host left; {name} is the host now and the game goes on.',
   'lobby.notice.hostLeftGame': 'The host left mid-game; the game stopped and a new host was chosen.',
   'lobby.denied.kicked': 'The host removed you from the lobby',
   'lobby.denied.locked': 'This lobby is locked',
@@ -872,6 +878,7 @@ export const en: Record<keyof typeof fa, string> = {
   'poker.pot': 'Pot',
   'poker.allInTag': 'All-in',
   'poker.foldedTag': 'Folded',
+  'poker.leftTag': 'Left',
   'poker.act.fold': 'Fold',
   'poker.act.check': 'Check',
   'poker.act.call': 'Call',

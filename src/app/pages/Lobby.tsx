@@ -39,6 +39,7 @@ export function LobbyPage() {
   const [configFor, setConfigFor] = useState<string | null>(null);
   const [playerMenu, setPlayerMenu] = useState<string | null>(null);
   const [how, setHow] = useState(false);
+  const [leaving, setLeaving] = useState(false);
   const [copied, setCopied] = useState(false);
   const [since] = useState(() => Date.now());
 
@@ -111,6 +112,13 @@ export function LobbyPage() {
       </Notice>
     ) : null;
 
+  const hostName = lobby.players.find((p) => p.id === lobby.hostId)?.name ?? '';
+  const notice = lobby.notice ? (
+    <div data-testid="lobby-notice">
+      <Notice tone="warn">{t(`lobby.notice.${lobby.notice}`, { name: hostName })}</Notice>
+    </div>
+  ) : null;
+
   // ------------------------------------------------------------------ in game
   if (lobby.status === 'playing') {
     return (
@@ -118,9 +126,20 @@ export function LobbyPage() {
         family={family}
         title={gameMeta ? `${gameMeta.emoji} ${t(`game.${gameMeta.id}.name`)}` : ''}
         headerEnd={
-          <Button variant="ghost" size="icon" onClick={() => setHow(true)} aria-label={t('how.title')}>
-            ❓
-          </Button>
+          <>
+            <Button variant="ghost" size="icon" onClick={() => setHow(true)} aria-label={t('how.title')}>
+              ❓
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setLeaving(true)}
+              aria-label={t('lobby.leaveGame')}
+              data-testid="leave-game"
+            >
+              🚪
+            </Button>
+          </>
         }
         footer={
           lobby.result && isHost ? (
@@ -143,6 +162,7 @@ export function LobbyPage() {
         }
       >
         {hostLost}
+        {lobby.notice === 'hostHandedOver' && notice}
         {lobby.result ? (
           <ResultsView result={lobby.result} players={players} me={me} session={lobby} />
         ) : module && me ? (
@@ -169,6 +189,15 @@ export function LobbyPage() {
           </Button>
         )}
         {gameMeta && <HowTo gameId={gameMeta.id} open={how} onClose={() => setHow(false)} />}
+        <Sheet open={leaving} onClose={() => setLeaving(false)} title={t('lobby.leaveGame')}>
+          <p className="text-muted">{isHost ? t('lobby.leaveHostHint') : t('lobby.leaveHint')}</p>
+          <Button variant="danger" size="lg" onClick={leave} data-testid="confirm-leave">
+            🚪 {t('lobby.leaveGame')}
+          </Button>
+          <Button variant="secondary" onClick={() => setLeaving(false)}>
+            {t('common.cancel')}
+          </Button>
+        </Sheet>
       </Screen>
     );
   }
@@ -228,7 +257,7 @@ export function LobbyPage() {
       }
     >
       {hostLost}
-      {lobby.notice && <Notice tone="warn">{t(`lobby.notice.${lobby.notice}`)}</Notice>}
+      {notice}
       {state.lastError && <Notice tone="danger">{t(`err.${state.lastError}`)}</Notice>}
       <Card className="flex flex-col items-center gap-3 text-center">
         <span className="text-muted text-sm">{t('lobby.code')}</span>

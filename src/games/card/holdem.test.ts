@@ -422,6 +422,48 @@ describe('cards.holdem — pass & play, clock, levels, end', () => {
   });
 });
 
+describe('cards.holdem — the online host changes', () => {
+  const handOver = (d: Driver, to: string, leaving: boolean) => {
+    d.runner.state = holdem.hostChanged!(st(d), to, { now: d.now, leaving }) as HoldemState;
+  };
+
+  it('the host who leaves folds right away (even mid-turn) and is dealt out of later hands', () => {
+    const d = new Driver(holdem, makePlayers(4), cfg());
+    // make p1 (the host) the one to act
+    while (st(d).toAct !== 'p1') d.act(st(d).toAct!, { type: 'call' });
+    handOver(d, 'p2', true);
+    const s = st(d);
+    expect(s.hostId).toBe('p2');
+    expect(s.folded).toContain('p1');
+    expect(s.toAct).not.toBe('p1');
+    expect(s.left).toEqual(['p1']);
+    expect((d.view('p3') as HoldemView).seats.find((x) => x.id === 'p1')!.left).toBe(true);
+    // the hand plays on without them, and the next hand is dealt without them
+    while (st(d).phase === 'betting') d.act(st(d).toAct!, { type: st(d).currentBet ? 'fold' : 'check' });
+    expect(['handOver', 'over']).toContain(st(d).phase);
+    d.noop('p1', { type: 'nextHand' });
+    d.act('p2', { type: 'nextHand' }); // the new host deals
+    expect(st(d).inHand).not.toContain('p1');
+    expect(total(d)).toBe(4000);
+  });
+
+  it('when the host leaves and only one other player is left, the game is over', () => {
+    const d = new Driver(holdem, makePlayers(2), cfg());
+    handOver(d, 'p2', true);
+    expect(st(d).phase).toBe('over');
+    expect(d.result()!.winners).toEqual(['p2']);
+  });
+
+  it('a hand-over without leaving only moves the host powers', () => {
+    const d = new Driver(holdem, makePlayers(3), cfg());
+    const before = st(d);
+    handOver(d, 'p3', false);
+    expect(st(d).hostId).toBe('p3');
+    expect(st(d).folded).toEqual(before.folded);
+    expect(st(d).left).toEqual([]);
+  });
+});
+
 describe('cards.holdem — random play keeps every chip', () => {
   // a tiny deterministic generator so the test itself is reproducible
   const lcg = (seed: number) => () => (seed = (seed * 1103515245 + 12345) % 2 ** 31) / 2 ** 31;

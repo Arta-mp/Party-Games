@@ -92,12 +92,16 @@ export interface HoldemState {
   shown: PlayerId[];
   log: Msg[];
   lastAction: Record<PlayerId, string>;
+  /** left the online room (the host who handed over and went): folded and dealt out of later hands */
+  left: PlayerId[];
 }
 
 // ------------------------------------------------------------------ seat helpers
 
 const name = (s: HoldemState, p: PlayerId) => s.players.find((x) => x.id === p)?.name ?? p;
 const order = (s: HoldemState) => s.players.map((p) => p.id);
+/** players still at the table (not left the online room) */
+const seated = (s: HoldemState) => order(s).filter((p) => !s.left.includes(p));
 
 /** seats after `from` (exclusive) in table order, wrapping around, filtered */
 function after(s: HoldemState, from: PlayerId, pool: PlayerId[]): PlayerId[] {
@@ -173,7 +177,7 @@ function startHand(s: HoldemState, rng: Rng, now: number) {
     s.bb *= 2;
     s.log.push({ k: 'poker.log.blindsUp', p: { sb: s.sb, bb: s.bb } });
   }
-  s.inHand = order(s).filter((p) => s.stacks[p]! > 0);
+  s.inHand = seated(s).filter((p) => s.stacks[p]! > 0);
   s.folded = [];
   s.board = [];
   s.hole = {};
@@ -205,7 +209,7 @@ function startHand(s: HoldemState, rng: Rng, now: number) {
   const first = after(s, bbP, canAct(s))[0] ?? null;
   s.toAct = first;
   setClock(s, now);
-  advanceIfDone(s, rng, now);
+  advanceIfDone(s, now);
 }
 
 function setClock(s: HoldemState, now: number) {
@@ -226,7 +230,7 @@ function nextActor(s: HoldemState, from: PlayerId): PlayerId | null {
 }
 
 /** after every action: award, move to the next player, next street or showdown */
-function advanceIfDone(s: HoldemState, rng: Rng, now: number) {
+function advanceIfDone(s: HoldemState, now: number) {
   if (live(s).length === 1) return awardUncontested(s);
   if (!streetDone(s)) {
     if (!s.toAct || !canAct(s).includes(s.toAct)) s.toAct = nextActor(s, s.toAct ?? s.button);
@@ -251,7 +255,7 @@ function advanceIfDone(s: HoldemState, rng: Rng, now: number) {
     s.actionEndsAt = null;
     return;
   }
-  if (runOut) return advanceIfDone(s, rng, now);
+  if (runOut) return advanceIfDone(s, now);
   s.toAct = after(s, s.button, canAct(s))[0] ?? null;
   setClock(s, now);
 }
@@ -321,7 +325,7 @@ function endHand(s: HoldemState) {
   s.toAct = null;
   s.actionEndsAt = null;
   s.bets = {};
-  if (order(s).filter((p) => s.stacks[p]! > 0).length <= 1) s.phase = 'over';
+  if (seated(s).filter((p) => s.stacks[p]! > 0).length <= 1) s.phase = 'over';
 }
 
 function act(
@@ -406,6 +410,7 @@ export interface HoldemView {
     folded: boolean;
     allIn: boolean;
     button: boolean;
+    left: boolean;
     sb: boolean;
     bb: boolean;
     lastAction: string | null;
@@ -458,6 +463,7 @@ export const holdem: GameModule<HoldemConfig, HoldemState, HoldemAction, HoldemV
       shown: [],
       log: [],
       lastAction: {},
+      left: [],
     };
     startHand(s, rng, opts.now);
     return s;
@@ -476,7 +482,7 @@ export const holdem: GameModule<HoldemConfig, HoldemState, HoldemAction, HoldemV
         if (!who || who !== s.toAct) return state;
         if (!act(s, who, action)) return state;
         s.toAct = nextActor(s, who) ?? s.toAct;
-        advanceIfDone(s, ctx.rng, ctx.now);
+        advanceIfDone(s, ctx.now);
         return s;
       }
       case '$timeout': {
@@ -485,7 +491,7 @@ export const holdem: GameModule<HoldemConfig, HoldemState, HoldemAction, HoldemV
         const l = legal(s, who)!;
         act(s, who, { type: l.canCheck ? 'check' : 'fold' });
         s.toAct = nextActor(s, who) ?? s.toAct;
-        advanceIfDone(s, ctx.rng, ctx.now);
+        advanceIfDone(s, ctx.now);
         return s;
       }
       case 'dealt': {
@@ -494,7 +500,7 @@ export const holdem: GameModule<HoldemConfig, HoldemState, HoldemAction, HoldemV
         if (canAct(s).length <= 1) {
           // everyone is all-in: keep running the board out
           s.acted = canAct(s);
-          advanceIfDone(s, ctx.rng, ctx.now);
+          advanceIfDone(s, ctx.now);
           return s;
         }
         s.toAct = after(s, s.button, canAct(s))[0] ?? null;
@@ -513,7 +519,7 @@ export const holdem: GameModule<HoldemConfig, HoldemState, HoldemAction, HoldemV
       }
       case 'nextHand': {
         if (s.phase !== 'handOver' || !host) return state;
-        const withChips = order(s).filter((p) => s.stacks[p]! > 0);
+        const withChips = seated(s).filter((p) => s.stacks[p]! > 0);
         s.button = after(s, s.button, withChips)[0] ?? s.button;
         startHand(s, ctx.rng, ctx.now);
         return s;
@@ -569,6 +575,7 @@ export const holdem: GameModule<HoldemConfig, HoldemState, HoldemAction, HoldemV
           s.stacks[p.id] === 0 &&
           (s.phase === 'betting' || s.phase === 'dealing' || s.phase === 'pick'),
         button: p.id === s.button,
+        left: s.left.includes(p.id),
         sb: p.id === sbP,
         bb: p.id === bbP,
         lastAction: s.lastAction[p.id] ?? null,
@@ -605,6 +612,31 @@ export const holdem: GameModule<HoldemConfig, HoldemState, HoldemAction, HoldemV
       reveal: ranking.map((p) => ({ playerId: p.id, label: `🪙 ${s.stacks[p.id]}` })),
       highlights: winners.map((w) => ({ key: 'mvp', playerId: w })),
     };
+  },
+  hostChanged(state, newHostId, { now, leaving }) {
+    const s = clone(state);
+    const old = s.hostId;
+    s.hostId = newHostId;
+    if (!leaving || s.phase === 'over') return s;
+    s.left = [...new Set([...s.left, old])];
+    // the player who left the room folds; the table doesn't wait for them
+    if (
+      (s.phase === 'betting' || s.phase === 'dealing') &&
+      s.inHand.includes(old) &&
+      !s.folded.includes(old)
+    ) {
+      if (s.toAct === old) {
+        act(s, old, { type: 'fold' });
+        s.toAct = nextActor(s, old) ?? s.toAct;
+      } else {
+        s.folded.push(old);
+        say(s, old, 'fold');
+      }
+      if (s.phase === 'betting') advanceIfDone(s, now);
+      else if (live(s).length === 1) awardUncontested(s);
+    }
+    if (s.phase === 'handOver' && seated(s).filter((p) => s.stacks[p]! > 0).length <= 1) s.phase = 'over';
+    return s;
   },
   // virtual cards in pass & play: the phone goes to whoever acts (their hole cards are private)
   pending: (s) => (s.local && s.cfg.cards === 'virtual' && s.phase === 'betting' && s.toAct ? [s.toAct] : []),
